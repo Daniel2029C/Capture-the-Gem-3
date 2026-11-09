@@ -16,6 +16,8 @@ namespace CTG.Rendering
         readonly Dictionary<(LiquidType, bool), TileBase> m_LiquidAssets = new();
         Tilemap m_Tilemap;
         Tilemap m_LiquidMap;
+        Tilemap m_FringeMap;
+        readonly Dictionary<(FringeKind, int), TileBase> m_FringeAssets = new();
         TileWorld m_World;
 
         public void Bind(TileWorld world)
@@ -31,6 +33,13 @@ namespace CTG.Rendering
             m_LiquidMap = liquidGo.AddComponent<Tilemap>();
             m_LiquidMap.tileAnchor = Vector3.zero;
             liquidGo.AddComponent<TilemapRenderer>().sortingOrder = 20;
+
+            // Decoration in the empty tiles beside terrain (moss, roots, liquid glow), behind the player.
+            var fringeGo = new GameObject("Fringe");
+            fringeGo.transform.SetParent(transform, false);
+            m_FringeMap = fringeGo.AddComponent<Tilemap>();
+            m_FringeMap.tileAnchor = Vector3.zero;
+            fringeGo.AddComponent<TilemapRenderer>().sortingOrder = 2;
 
             m_World = world;
             m_World.TileChanged += HandleTileChanged;
@@ -50,6 +59,7 @@ namespace CTG.Rendering
         {
             m_Tilemap.ClearAllTiles();
             m_LiquidMap.ClearAllTiles();
+            m_FringeMap.ClearAllTiles();
 
             var positions = new List<Vector3Int>();
             var tiles = new List<TileBase>();
@@ -77,6 +87,10 @@ namespace CTG.Rendering
 
             m_Tilemap.SetTiles(positions.ToArray(), tiles.ToArray());
             m_LiquidMap.SetTiles(liquidPositions.ToArray(), liquidTiles.ToArray());
+            for (int y = 0; y < m_World.Height; y++)
+            {
+                for (int x = 0; x < m_World.Width; x++) RefreshFringe(x, y);
+            }
         }
 
         void HandleTileChanged(int x, int y, TileId oldId, TileId newId)
@@ -87,6 +101,7 @@ namespace CTG.Rendering
                 for (int dy = -1; dy <= 1; dy++)
                 {
                     RefreshTile(x + dx, y + dy);
+                    RefreshFringe(x + dx, y + dy);
                 }
             }
         }
@@ -103,6 +118,8 @@ namespace CTG.Rendering
         {
             RefreshLiquid(x, y);
             RefreshLiquid(x, y - 1); // the tile below may gain or lose its bright surface
+            RefreshFringe(x, y);
+            RefreshFringe(x, y + 1);
         }
 
         void RefreshLiquid(int x, int y)
@@ -110,6 +127,38 @@ namespace CTG.Rendering
             LiquidType liquid = m_World.GetLiquid(x, y);
             m_LiquidMap.SetTile(new Vector3Int(x, y, 0),
                 liquid == LiquidType.None ? null : GetLiquidAsset(liquid, m_World.GetLiquid(x, y + 1) != liquid));
+        }
+
+        static bool IsEarth(TileId id) => id == TileId.BlueDirt || id == TileId.RedDirt;
+
+        /// <summary>Picks the decoration for an empty, liquid-free tile: glow over a liquid surface, else moss on earth below, else roots from earth above.</summary>
+        void RefreshFringe(int x, int y)
+        {
+            if (!m_World.InBounds(x, y)) return;
+
+            FringeKind? kind = null;
+            if (m_World.Get(x, y) == TileId.Air && m_World.GetLiquid(x, y) == LiquidType.None)
+            {
+                LiquidType below = m_World.InBounds(x, y - 1) ? m_World.GetLiquid(x, y - 1) : LiquidType.None;
+                if (below == LiquidType.Lava) kind = FringeKind.LavaGlow;
+                else if (below == LiquidType.Nectar) kind = FringeKind.NectarGlow;
+                else if (m_World.InBounds(x, y - 1) && IsEarth(m_World.Get(x, y - 1))) kind = FringeKind.Tuft;
+                else if (m_World.InBounds(x, y + 1) && IsEarth(m_World.Get(x, y + 1))) kind = FringeKind.Root;
+            }
+
+            Vector3Int cell = new Vector3Int(x, y, 0);
+            if (kind == null) { m_FringeMap.SetTile(cell, null); return; }
+
+            int variant = (int)(((uint)x * 73856093u ^ (uint)y * 19349663u) >> 4) % FringeArt.Variants;
+            if (!m_FringeAssets.TryGetValue((kind.Value, variant), out TileBase asset))
+            {
+                var tile = ScriptableObject.CreateInstance<Tile>();
+                tile.sprite = FringeArt.Get(kind.Value, variant);
+                tile.colliderType = Tile.ColliderType.None;
+                m_FringeAssets[(kind.Value, variant)] = asset = tile;
+            }
+
+            m_FringeMap.SetTile(cell, asset);
         }
 
         TileBase GetLiquidAsset(LiquidType liquid, bool surface)
@@ -131,14 +180,14 @@ namespace CTG.Rendering
         {
             TileShape shape = m_World.GetShape(x, y);
             int mask = 0;
-            if (SameKind(x - 1, y, id)) mask |= PlaceholderSprites.SameLeft;
-            if (SameKind(x + 1, y, id)) mask |= PlaceholderSprites.SameRight;
-            if (SameKind(x, y - 1, id)) mask |= PlaceholderSprites.SameBelow;
-            if (SameKind(x, y + 1, id)) mask |= PlaceholderSprites.SameAbove;
-            if (SameKind(x - 1, y - 1, id)) mask |= PlaceholderSprites.SameBelowLeft;
-            if (SameKind(x + 1, y - 1, id)) mask |= PlaceholderSprites.SameBelowRight;
-            if (SameKind(x - 1, y + 1, id)) mask |= PlaceholderSprites.SameAboveLeft;
-            if (SameKind(x + 1, y + 1, id)) mask |= PlaceholderSprites.SameAboveRight;
+            if (SameKind(x - 1, y, id)) mask |= TileArt.SameLeft;
+            if (SameKind(x + 1, y, id)) mask |= TileArt.SameRight;
+            if (SameKind(x, y - 1, id)) mask |= TileArt.SameBelow;
+            if (SameKind(x, y + 1, id)) mask |= TileArt.SameAbove;
+            if (SameKind(x - 1, y - 1, id)) mask |= TileArt.SameBelowLeft;
+            if (SameKind(x + 1, y - 1, id)) mask |= TileArt.SameBelowRight;
+            if (SameKind(x - 1, y + 1, id)) mask |= TileArt.SameAboveLeft;
+            if (SameKind(x + 1, y + 1, id)) mask |= TileArt.SameAboveRight;
 
             int variant = (int)(((uint)x * 73856093u ^ (uint)y * 19349663u) >> 4) % k_SpeckleVariants;
             return GetTileAsset(id, shape, mask, variant);
@@ -155,7 +204,7 @@ namespace CTG.Rendering
             TileDef def = TileDefs.Get(id);
             var tile = ScriptableObject.CreateInstance<Tile>();
             tile.name = def.Name;
-            tile.sprite = id == TileId.Ward ? PlaceholderSprites.Ward() : PlaceholderSprites.Tile($"tile_{def.Name}", def.Color, shape, mask, variant);
+            tile.sprite = id == TileId.Ward ? PlaceholderSprites.Ward() : TileArt.Tile(id, def.Color, shape, mask, variant);
             tile.colliderType = Tile.ColliderType.None;
             m_TileAssets[(id, shape, mask, variant)] = tile;
             return tile;

@@ -76,7 +76,7 @@ namespace CTG
             projectiles.Initialize(World);
 
 
-            worldCamera.backgroundColor = new Color32(100, 150, 230, 255);
+            worldCamera.backgroundColor = new Color32(14, 18, 28, 255);
             worldCamera.clearFlags = CameraClearFlags.SolidColor;
             CameraView cameraView = worldCamera.GetComponent<CameraView>();
             if (cameraView == null) cameraView = worldCamera.gameObject.AddComponent<CameraView>();
