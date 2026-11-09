@@ -13,7 +13,7 @@ namespace CTG.Gameplay
     /// releases it and fires the arrow from the charge reached.</item>
     /// <item>The bow stays drawn for the item's useTime after release, then a new draw can start.</item>
     /// </list>
-    /// The item can't be switched while a draw is active. Arrows are unlimited.
+    /// Switching items drops a draw in progress (see <see cref="CancelBySwitch"/>). Arrows are unlimited.
     /// </summary>
     public sealed class ChargeBow
     {
@@ -22,6 +22,7 @@ namespace CTG.Gameplay
         int m_SecondaryLastDrawTick = int.MinValue / 2;
         int m_TicksSinceRelease;
         bool m_Fired;
+        int m_LockedUntilTick = int.MinValue / 2;
 
         /// <summary>A draw is in progress (charging, or the short hold after release).</summary>
         public bool Active { get; private set; }
@@ -53,12 +54,24 @@ namespace CTG.Gameplay
             Charge = 0f;
         }
 
+        /// <summary>
+        /// Another item was selected during a draw. An unreleased draw is dropped without firing; one already
+        /// fired still blocks the next draw for the rest of its hold time, so switching can't shorten the shot cycle.
+        /// </summary>
+        public void CancelBySwitch(int tick)
+        {
+            if (!Active) return;
+
+            if (Released && Item != null) m_LockedUntilTick = tick + Mathf.Max(0, Item.UseTime - m_TicksSinceRelease);
+            Cancel();
+        }
+
         public void Tick(int tick, ItemDef item, bool primaryHeld, bool secondaryHeld, Vector2 cursorPx, PlayerMotor motor)
         {
             ChargeBowStats stats = item.ChargeBow;
             if (stats == null) return;
 
-            if (!Active)
+            if (!Active && tick >= m_LockedUntilTick)
             {
                 if (primaryHeld && tick - m_PrimaryLastDrawTick >= stats.UseDelayTicks)
                 {

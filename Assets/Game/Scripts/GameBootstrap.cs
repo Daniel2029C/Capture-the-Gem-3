@@ -64,11 +64,38 @@ namespace CTG
             var playerGo = new GameObject("Player");
             Player = playerGo.AddComponent<PlayerCharacter>();
             // Spawn in the middle of the map, on the first surface found from the top.
-            int standRow = MapLoader.FindStandRow(Map, Map.CenterX, out int spawnColumn);
+            int standRow, spawnColumn;
+            if (Map.BlueSpawn.HasValue)
+            {
+                // The map has spawn rooms: start on the floor of the blue room, a few tiles in from its left wall.
+                RectInt room = Map.BlueSpawn.Value;
+                spawnColumn = room.x + 3;
+                standRow = room.y - 1;
+            }
+            else
+            {
+                standRow = MapLoader.FindStandRow(Map, Map.CenterX, out spawnColumn);
+            }
+
             if (standRow < 0) throw new System.InvalidOperationException($"Map '{Map.Name}' has nowhere to spawn.");
 
             Vector2 spawn = StandPosition(spawnColumn, standRow, PlayerCharacter.HitboxWidthPx);
             Player.Initialize(World, editor, input, spawn);
+            if (Map.BlueSpawn.HasValue)
+            {
+                RectInt room = Map.BlueSpawn.Value;
+                Player.HomeRoomPx = new Rect(room.x * SimUnits.PixelsPerTile, room.y * SimUnits.PixelsPerTile,
+                                             room.width * SimUnits.PixelsPerTile, room.height * SimUnits.PixelsPerTile);
+                // The player starts in the blue room, so they play for blue.
+                Player.Team = Team.Blue;
+            }
+
+            GemMatch gemMatch = GemMatch.Create(transform, Map, Player);
+            if (gemMatch != null)
+            {
+                GemView.Create(transform, gemMatch);
+                MatchHud.Create(transform, gemMatch);
+            }
 
             // Registered after the player so projectiles fired this tick also move this tick.
             var projectiles = new GameObject("Projectiles").AddComponent<ProjectileSystem>();

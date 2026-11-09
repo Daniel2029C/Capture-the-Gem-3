@@ -29,6 +29,8 @@ namespace CTG.Gameplay
         [Header("Life")]
         [SerializeField] int maxLife = 100;
         [SerializeField] float regenPerSecond = 1f;
+        [Tooltip("Extra life per second while inside the home spawn room.")]
+        [SerializeField] float spawnRoomRegenPerSecond = 5f;
         [Tooltip("Ticks of immunity after being hit, so overlapping attacks can't all land in the same instant.")]
         [SerializeField] int hitImmunityTicks = 8;
         [Tooltip("Seconds from death to respawn. Will be driven by class and game state later.")]
@@ -79,6 +81,8 @@ namespace CTG.Gameplay
         public HealingPotion Potion { get; } = new();
         /// <summary>The class's grappling hooks (ability 1), or null if it has none.</summary>
         public GrapplingHooks Hooks { get; private set; }
+        /// <summary>The player's own spawn room (world px), or null. Standing in it gives extra regeneration.</summary>
+        public Rect? HomeRoomPx { get; set; }
         public Inventory Inventory { get; private set; }
         public ItemUser ItemUser { get; private set; }
         public InputFrame LastInput { get; private set; }
@@ -258,6 +262,7 @@ namespace CTG.Gameplay
             // Ability 1: fire a hook toward the cursor.
             if (Hooks != null && input.Ability1) Hooks.TryFire(Motor.Center, cursorPx, Motor.Direction);
 
+            Motor.DropThrough = input.Down;
             UpdateLiquids();
 
             // Hooked, the latched hooks pull the player; a fresh jump press lets go.
@@ -276,6 +281,7 @@ namespace CTG.Gameplay
             if (ItemUser.Bow.Active) Motor.Direction = ItemUser.UseDirection;
 
             HandleDevInput(input, cursorPx);
+            Health.ZoneRegenPerSecond = HomeRoomPx.HasValue && HomeRoomPx.Value.Contains(Motor.Center) ? spawnRoomRegenPerSecond : 0f;
             Health.Tick();
             if (!Health.IsDead) Mana.Tick();
         }

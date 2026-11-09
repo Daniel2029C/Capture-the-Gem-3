@@ -86,6 +86,7 @@ namespace CTG.World
         public bool CanPlace(Vector2Int tile, TileId type, Rect blockerPixels)
         {
             if (!m_World.InBounds(tile.x, tile.y)) return false;
+            if (m_World.IsNoBuild(tile.x, tile.y)) return false;
             if (m_World.Get(tile.x, tile.y) != TileId.Air) return false;
             if (!TileDefs.Get(type).Placeable) return false;
 

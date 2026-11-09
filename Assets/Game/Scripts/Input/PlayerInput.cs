@@ -9,6 +9,8 @@ namespace CTG.Input
         public bool Left;
         public bool Right;
         public bool Jump;
+        /// <summary>Down held (S / down arrow): drop through glass platforms.</summary>
+        public bool Down;
         public bool UseItem;
         /// <summary>Secondary use (right click), e.g. a bow's second arrow.</summary>
         public bool UseAlt;
@@ -102,6 +104,7 @@ namespace CTG.Input
                 frame.Left = keyboard.aKey.isPressed || keyboard.leftArrowKey.isPressed;
                 frame.Right = keyboard.dKey.isPressed || keyboard.rightArrowKey.isPressed;
                 frame.Jump = keyboard.spaceKey.isPressed || m_JumpLatched;
+                frame.Down = keyboard.sKey.isPressed || keyboard.downArrowKey.isPressed;
             }
 
             if (mouse != null)

@@ -59,6 +59,9 @@ namespace CTG.Gameplay
         /// </summary>
         public LiquidType Liquid { get; set; }
 
+        /// <summary>Down is held this tick, so glass platforms can be fallen through. Set by the player before each tick.</summary>
+        public bool DropThrough { get; set; }
+
         public bool InLiquid => Liquid != LiquidType.None;
 
         const float k_LavaGravity = 0.2f;
@@ -124,6 +127,8 @@ namespace CTG.Gameplay
         public bool DoubleJumping { get; private set; }
 
         int m_JumpTicksLeft;
+        /// <summary>Being pulled downward by a hook: glass platforms don't catch the player.</summary>
+        bool m_IgnorePlatforms;
         bool m_ReleasedJump = true;
         bool m_HitCeilingLastTick;
 
@@ -193,6 +198,7 @@ namespace CTG.Gameplay
             PreviousPosition = Position;
 
             Velocity = pullVelocity;
+            m_IgnorePlatforms = pullVelocity.y < 0f;
             DoubleJumping = false;
             DoubleJumpAvailable = DoubleJump != null;
 
@@ -227,6 +233,7 @@ namespace CTG.Gameplay
             // allowed again and runs on the pull's velocity: hooking a ledge beside the feet and releasing
             // hops onto it and carries the pull's forward speed, like walking onto a one-tile step.
             Collide(letGo);
+            m_IgnorePlatforms = false;
             return letGo;
         }
 
@@ -336,7 +343,7 @@ namespace CTG.Gameplay
             PreviousStepOffset = StepOffset;
             StepOffset = Mathf.MoveTowards(StepOffset, 0f, Mathf.Max(k_MinStepSettleSpeed, Mathf.Abs(Velocity.x)));
 
-            PlayerCollision.Result r = m_Collision.Move(Position, Velocity, Width, Height, Active.Gravity, Liquid, allowStepUp);
+            PlayerCollision.Result r = m_Collision.Move(Position, Velocity, Width, Height, Active.Gravity, Liquid, allowStepUp, DropThrough, m_IgnorePlatforms);
             Position = r.Position;
             Velocity = r.Velocity;
             Grounded = r.Grounded;

@@ -26,6 +26,37 @@ namespace CTG.Rendering
 
         static bool IsStone(TileId id) => id == TileId.BlueBrick || id == TileId.RedBrick;
 
+        /// <summary>A thin pale-glass strip along the top of the tile; the ends are capped where the platform stops.</summary>
+        public static Sprite Platform(int mask)
+        {
+            mask &= SameLeft | SameRight;
+            string key = $"art_Platform_{mask}";
+            if (s_Cache.TryGetValue(key, out Sprite cached)) return cached;
+
+            var texture = new Texture2D(k_Size, k_Size, TextureFormat.RGBA32, false)
+            {
+                filterMode = FilterMode.Point,
+                wrapMode = TextureWrapMode.Clamp,
+            };
+            var pixels = new Color[k_Size * k_Size];
+            for (int x = 0; x < k_Size; x++)
+            {
+                bool capLeft = (mask & SameLeft) == 0 && x == 0;
+                bool capRight = (mask & SameRight) == 0 && x == k_Size - 1;
+                int top = k_Size - 1;
+                pixels[top * k_Size + x] = capLeft || capRight ? new Color(0.9f, 0.97f, 1f, 1f) : new Color(0.75f, 0.92f, 1f, 0.95f);
+                pixels[(top - 1) * k_Size + x] = new Color(0.45f, 0.72f, 0.9f, 0.7f);
+                pixels[(top - 2) * k_Size + x] = new Color(0.3f, 0.55f, 0.8f, 0.3f);
+            }
+
+            texture.SetPixels(pixels);
+            texture.Apply();
+            Sprite sprite = Sprite.Create(texture, new Rect(0, 0, k_Size, k_Size), Vector2.zero, SimUnits.PixelsPerTile);
+            sprite.name = key;
+            s_Cache[key] = sprite;
+            return sprite;
+        }
+
         public static Sprite Tile(TileId id, Color accent, TileShape shape, int mask, int variant)
         {
             string key = $"art_{id}_{shape}_{mask}_{variant}";

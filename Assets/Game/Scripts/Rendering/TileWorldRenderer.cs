@@ -199,12 +199,13 @@ namespace CTG.Rendering
         TileBase GetTileAsset(TileId id, TileShape shape, int mask, int variant)
         {
             if (id == TileId.Ward) mask = variant = 0; // one look, whatever surrounds it
+            if (id == TileId.Platform) variant = 0;
             if (m_TileAssets.TryGetValue((id, shape, mask, variant), out TileBase asset)) return asset;
 
             TileDef def = TileDefs.Get(id);
             var tile = ScriptableObject.CreateInstance<Tile>();
             tile.name = def.Name;
-            tile.sprite = id == TileId.Ward ? PlaceholderSprites.Ward() : TileArt.Tile(id, def.Color, shape, mask, variant);
+            tile.sprite = id == TileId.Ward ? PlaceholderSprites.Ward() : id == TileId.Platform ? TileArt.Platform(mask) : TileArt.Tile(id, def.Color, shape, mask, variant);
             tile.colliderType = Tile.ColliderType.None;
             m_TileAssets[(id, shape, mask, variant)] = tile;
             return tile;

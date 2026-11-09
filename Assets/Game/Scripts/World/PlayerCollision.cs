@@ -30,6 +30,7 @@ namespace CTG.World
         }
 
         readonly TileWorld m_World;
+        bool m_SkipStepDown;
         readonly int m_WorldHeightTiles;
         readonly float m_WorldHeightPx;
 
@@ -81,7 +82,66 @@ namespace CTG.World
         /// <param name="liquid">Scales the displacement: lava half, nectar a quarter.</param>
         /// <param name="allowStepUp">False while hooked.</param>
         public Result Move(Vector2 positionUp, Vector2 velocityUp, float width, float height, float gravity,
-                           LiquidType liquid, bool allowStepUp)
+                           LiquidType liquid, bool allowStepUp, bool dropThrough, bool ignorePlatforms)
+        {
+            // Standing on a platform, the step-down onto whatever solid lies below must not run: the platform
+            // is what the player stands on, and stepping off it only to be put back would pile up visual lag.
+            m_SkipStepDown = !dropThrough && !ignorePlatforms && StandingOnPlatform(positionUp, width);
+            Result result = MoveSolid(positionUp, velocityUp, width, height, gravity, liquid, allowStepUp);
+            m_SkipStepDown = false;
+            if (!ignorePlatforms) LandOnPlatforms(positionUp, velocityUp, width, ref result, dropThrough);
+            return result;
+        }
+
+        bool StandingOnPlatform(Vector2 positionUp, float width)
+        {
+            float row = positionUp.y / 16f;
+            if (Mathf.Abs(row - Mathf.Round(row)) > 0.001f) return false;
+
+            int platformRow = Mathf.RoundToInt(row) - 1;
+            int x0 = Mathf.FloorToInt(positionUp.x / 16f);
+            int x1 = Mathf.FloorToInt((positionUp.x + width - 0.001f) / 16f);
+            for (int x = x0; x <= x1; x++)
+            {
+                if (m_World.InBounds(x, platformRow) && TileDefs.Get(m_World.Get(x, platformRow)).OneWay) return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// One-way platforms (glass): a platform catches a player who was entirely above its top at the start
+        /// of the tick and would end the tick below it. It never blocks from below or the sides. Holding down
+        /// passes through unless falling faster than 1 px/tick.
+        /// </summary>
+        void LandOnPlatforms(Vector2 startUp, Vector2 velocityUp, float width, ref Result result, bool dropThrough)
+        {
+            if (velocityUp.y > 0f || (dropThrough && -velocityUp.y <= 1f)) return;
+
+            int x0 = Mathf.FloorToInt(result.Position.x / 16f);
+            int x1 = Mathf.FloorToInt((result.Position.x + width - 0.001f) / 16f);
+            int yHigh = Mathf.FloorToInt(startUp.y / 16f);
+            int yLow = Mathf.FloorToInt(result.Position.y / 16f);
+            for (int row = yHigh; row >= yLow; row--)
+            {
+                float top = (row + 1) * 16f;
+                if (startUp.y < top - 0.01f || result.Position.y >= top) continue;
+
+                for (int x = x0; x <= x1; x++)
+                {
+                    if (!m_World.InBounds(x, row) || !TileDefs.Get(m_World.Get(x, row)).OneWay) continue;
+
+                    result.Position.y = top;
+                    result.Velocity.y = 0f;
+                    result.Grounded = true;
+                    result.StepVisual = 0f;
+                    return;
+                }
+            }
+        }
+
+        Result MoveSolid(Vector2 positionUp, Vector2 velocityUp, float width, float height, float gravity,
+                         LiquidType liquid, bool allowStepUp)
         {
             Result result = Run(positionUp, velocityUp, width, height, gravity, liquid, allowStepUp);
             if (!Overlaps(result.Position, width, height) || Overlaps(positionUp, width, height)) return result;
@@ -114,7 +174,7 @@ namespace CTG.World
             Vector4 walked = WalkDownSlope(position, velocity, w, h, gravity);
             position = new Vector2(walked.x, walked.y);
             velocity = new Vector2(walked.z, walked.w);
-            if (velocity.y == gravity) StepDown(ref position, w, h, velocity);
+            if (velocity.y == gravity && !m_SkipStepDown) StepDown(ref position, w, h, velocity);
             if (allowStepUp && velocity.y >= gravity) StepUp(ref position, velocity, w, h);
 
             switch (liquid)

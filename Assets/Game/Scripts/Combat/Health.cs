@@ -14,6 +14,8 @@ namespace CTG.Combat
 
         /// <summary>Life restored per second while alive and below max.</summary>
         public float RegenPerSecond { get; set; }
+        /// <summary>Extra life per second from the area the player is in (the spawn room); set each tick.</summary>
+        public float ZoneRegenPerSecond { get; set; }
 
         /// <summary>Ticks of immunity after taking a hit.</summary>
         public int HitImmunityTicks { get; set; }
@@ -179,7 +181,7 @@ namespace CTG.Combat
                 return false;
             }
 
-            float regenPerSecond = RegenPerSecond + (regenBuff ? RegenBuffLifePerSecond : 0);
+            float regenPerSecond = RegenPerSecond + ZoneRegenPerSecond + (regenBuff ? RegenBuffLifePerSecond : 0);
             if (Current < Max && regenPerSecond > 0f)
             {
                 // Progress is counted in 1/60ths of a point so whole-number rates add up exactly

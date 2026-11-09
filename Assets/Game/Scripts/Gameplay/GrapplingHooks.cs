@@ -207,6 +207,8 @@ namespace CTG.Gameplay
             }
         }
 
-        bool CanLatch(int x, int y) => m_World.InBounds(x, y) && m_World.IsSolid(x, y);
+        /// <summary>Hooks catch on solid tiles and on glass platforms (flying hooks pass through platforms otherwise).</summary>
+        bool CanLatch(int x, int y) =>
+            m_World.InBounds(x, y) && (m_World.IsSolid(x, y) || TileDefs.Get(m_World.Get(x, y)).OneWay);
     }
 }

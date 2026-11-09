@@ -11,6 +11,7 @@ namespace CTG.World
     // legend         : glyph -> tile type name ("Air", "BlueDirt", "RedDirt", "BlueBrick", "RedBrick", "Ward").
     // tiles          : `height` strings of `width` glyphs, top row first.
     // liquids        : same layout, the liquids: '~' lava, 'n' nectar, '.' none. May be empty.
+    // zones          : optional rectangles (x, y from the top row, w, h): SpawnBlue / SpawnRed rooms, BlueGem / RedGem hitboxes, NoBuild areas.
     // shapes         : sparse list of non-full tiles: x, y (y counted from the top row) and a TileShape name.
 
     [Serializable]
@@ -28,6 +29,17 @@ namespace CTG.World
         public string shape;
     }
 
+    /// <summary>A rectangle of the arena (x, y from the top-left, in tiles) with a purpose: "SpawnBlue", "SpawnRed", "BlueGem", "RedGem" or "NoBuild".</summary>
+    [Serializable]
+    public class MapZone
+    {
+        public string kind;
+        public int x;
+        public int y;
+        public int w;
+        public int h;
+    }
+
     [Serializable]
     public class MapFile
     {
@@ -39,6 +51,7 @@ namespace CTG.World
         public string[] tiles;
         public string[] liquids;
         public MapShapeEntry[] shapes;
+        public MapZone[] zones;
     }
 
     /// <summary>A loaded map: the world plus where the arena sits inside it.</summary>
@@ -50,6 +63,12 @@ namespace CTG.World
         public int Border;
         public int ArenaWidth;
         public int ArenaHeight;
+        /// <summary>Interior of each team's spawn room in world tiles (x, y = bottom-left), or null if the map has none.</summary>
+        public RectInt? BlueSpawn;
+        public RectInt? RedSpawn;
+        /// <summary>Each team's gem hitbox (6×9 tiles) in world tiles (x, y = bottom-left), or null.</summary>
+        public RectInt? BlueGem;
+        public RectInt? RedGem;
 
         /// <summary>Tile x of the arena's centre column.</summary>
         public int CenterX => Border + ArenaWidth / 2;
@@ -133,10 +152,30 @@ namespace CTG.World
                 }
             }
 
-            return new LoadedMap
+            var map = new LoadedMap
             {
                 Name = file.name, World = world, Border = border, ArenaWidth = file.width, ArenaHeight = file.height,
             };
+
+            if (file.zones != null)
+            {
+                foreach (MapZone zone in file.zones)
+                {
+                    // Convert from arena top-left tiles to world bottom-left tiles.
+                    var rect = new RectInt(border + zone.x, border + (file.height - zone.y - zone.h), zone.w, zone.h);
+                    switch (zone.kind)
+                    {
+                        case "SpawnBlue": map.BlueSpawn = rect; break;
+                        case "SpawnRed": map.RedSpawn = rect; break;
+                        case "BlueGem": map.BlueGem = rect; break;
+                        case "RedGem": map.RedGem = rect; break;
+                        case "NoBuild": world.SetNoBuild(rect.x, rect.y, rect.width, rect.height); break;
+                        default: throw new InvalidOperationException($"Map '{file.name}': unknown zone '{zone.kind}'.");
+                    }
+                }
+            }
+
+            return map;
         }
 
         static TileId ParseTile(string name)

@@ -14,6 +14,7 @@ namespace CTG.World
         readonly TileId[] m_Tiles;
         readonly TileShape[] m_Shapes;
         readonly LiquidType[] m_Liquid;
+        readonly bool[] m_NoBuild;
 
         public int Width { get; }
         public int Height { get; }
@@ -31,6 +32,7 @@ namespace CTG.World
             m_Tiles = new TileId[width * height];
             m_Shapes = new TileShape[width * height];
             m_Liquid = new LiquidType[width * height];
+            m_NoBuild = new bool[width * height];
             Array.Fill(m_Tiles, TileId.Air);
         }
 
@@ -39,6 +41,20 @@ namespace CTG.World
         public TileId Get(int x, int y) => InBounds(x, y) ? m_Tiles[y * Width + x] : TileId.Stone;
 
         public bool IsSolid(int x, int y) => !InBounds(x, y) || TileDefs.Get(m_Tiles[y * Width + x]).Solid;
+
+        /// <summary>Tiles where nobody can place blocks (the gem area).</summary>
+        public bool IsNoBuild(int x, int y) => InBounds(x, y) && m_NoBuild[y * Width + x];
+
+        public void SetNoBuild(int x0, int y0, int w, int h)
+        {
+            for (int y = y0; y < y0 + h; y++)
+            {
+                for (int x = x0; x < x0 + w; x++)
+                {
+                    if (InBounds(x, y)) m_NoBuild[y * Width + x] = true;
+                }
+            }
+        }
 
         public TileShape GetShape(int x, int y) => InBounds(x, y) ? m_Shapes[y * Width + x] : TileShape.Full;
 

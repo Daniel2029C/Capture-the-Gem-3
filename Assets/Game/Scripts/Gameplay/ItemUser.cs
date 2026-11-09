@@ -43,6 +43,8 @@ namespace CTG.Gameplay
         public int BonusTileReach;
 
         bool m_ReleasedUse = true;
+        /// <summary>The previous use was cut short by a switch: the next use keeps the remaining action cooldown instead of resetting it.</summary>
+        bool m_CarryCooldown;
 
         public ItemUser(Inventory inventory, TileEditor tileEditor, IDamageable owner)
         {
@@ -71,6 +73,9 @@ namespace CTG.Gameplay
             ItemStack held = m_Inventory.Selected;
             ItemDef def = held.Def;
 
+            // Switched away mid-use: end the use but keep the action cooldowns running.
+            if ((ItemAnimation > 0 || Bow.Active) && held.Id != UsingItem) CutShortBySwitch(tick);
+
             if (!held.IsEmpty && def.UseStyle == UseStyle.ChargeBow)
             {
                 Bow.Tick(tick, def, useHeld, altHeld, cursorPx, motor);
@@ -90,7 +95,8 @@ namespace CTG.Gameplay
                 {
                     ItemAnimation = def.UseAnimation;
                     ItemAnimationMax = def.UseAnimation;
-                    ItemTime = 0;
+                    if (!m_CarryCooldown) ItemTime = 0;
+                    m_CarryCooldown = false;
                     UsingItem = held.Id;
                     UseDirection = cursorPx.x >= motor.Center.x ? 1 : -1;
                     m_HitThisUse.Clear();
@@ -123,6 +129,14 @@ namespace CTG.Gameplay
                     ItemTime = def.UseTime;
                 }
             }
+        }
+
+        /// <summary>Ends the use in progress because another item was selected, leaving every cooldown as it was.</summary>
+        void CutShortBySwitch(int tick)
+        {
+            ItemAnimation = 0;
+            m_CarryCooldown = true;
+            Bow.CancelBySwitch(tick);
         }
 
         void TickMelee(PlayerMotor motor)
@@ -170,6 +184,12 @@ namespace CTG.Gameplay
                    bottom - rangeY + 1 <= tile.y;
         }
 
-        public bool CanSwitchItems => !IsUsing;
+        /// <summary>
+        /// Every item can be switched away from at once, mid-use included. Switching cuts the current use short
+        /// (a swing ends, a bow draw is dropped) but never resets its cooldown, so switching can't make anything
+        /// faster: the next action waits for what is left of the last one's cooldown. A new kind of item gets this
+        /// by clearing its own in-progress state in <see cref="CutShortBySwitch"/>.
+        /// </summary>
+        public bool CanSwitchItems => true;
     }
 }

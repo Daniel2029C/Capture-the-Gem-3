@@ -14,6 +14,8 @@ namespace CTG.World
         Ward = 10002,
         RedDirt = 10003,
         BlueDirt = 10004,
+        /// <summary>Glass platform: solid only from above, and can be dropped through.</summary>
+        Platform = 10005,
     }
 
     public readonly struct TileDef
@@ -33,9 +35,11 @@ namespace CTG.World
         /// <summary>Item granted to the miner when the tile breaks.</summary>
         public readonly Items.ItemId Drop;
         public readonly Color Color;
+        /// <summary>Solid only from above: players land on it when falling, pass up and sideways through it, and can drop through it.</summary>
+        public readonly bool OneWay;
 
         public TileDef(TileId id, string name, bool solid, bool breakable, bool placeable,
-                       float pickDamageMultiplier, Items.ItemId drop, Color color)
+                       float pickDamageMultiplier, Items.ItemId drop, Color color, bool oneWay = false)
         {
             Id = id;
             Name = name;
@@ -45,6 +49,7 @@ namespace CTG.World
             PickDamageMultiplier = pickDamageMultiplier;
             Drop = drop;
             Color = color;
+            OneWay = oneWay;
         }
     }
 
@@ -73,8 +78,14 @@ namespace CTG.World
         static readonly TileDef s_Ward = new(TileId.Ward, "Ward Block", false, true, true, 2f, Items.ItemId.WardBlock,
                                              new Color32(120, 220, 255, 255));
 
+        // Map-only glass platform. Not Solid, so projectiles, hooks and building treat it as open; only
+        // player collision gives it a walkable top.
+        static readonly TileDef s_Platform = new(TileId.Platform, "Glass Platform", false, false, false, 0f, Items.ItemId.None,
+                                                 new Color32(150, 215, 235, 255), oneWay: true);
+
         public static TileDef Get(TileId id) => id switch
         {
+            TileId.Platform => s_Platform,
             TileId.Ward => s_Ward,
             TileId.BlueBrick => s_BlueBrick,
             TileId.RedBrick => s_RedBrick,
