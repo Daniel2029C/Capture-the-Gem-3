@@ -35,6 +35,9 @@ namespace CTG.Gameplay
 
         PlayerCharacter m_Player;
 
+        /// <summary>The match clock and objective only run while this is set (the flow sets it when play starts).</summary>
+        public bool Running { get; set; }
+
         public static readonly Color BlueMessage = new Color32(0, 119, 182, 255);
         public static readonly Color RedMessage = new Color32(255, 0, 0, 255);
 
@@ -79,7 +82,7 @@ namespace CTG.Gameplay
         public void Tick(int tick)
         {
             if (MessageTicksLeft > 0) MessageTicksLeft--;
-            if (IsOver || m_Player == null || m_Player.Team == Team.Neutral) return;
+            if (!Running || IsOver || m_Player == null || m_Player.Team == Team.Neutral) return;
 
             MatchTicks++;
             UpdatePlayer(m_Player);
@@ -151,6 +154,14 @@ namespace CTG.Gameplay
             }
         }
 
+        /// <summary>Testing: ends the running match now, in favour of whoever leads on captures (blue on a tie).</summary>
+        public void DevEnd()
+        {
+            if (!Running || IsOver) return;
+
+            End(BlueCaptures >= RedCaptures ? Team.Blue : Team.Red);
+        }
+
         void End(Team winner)
         {
             IsOver = true;
@@ -159,7 +170,7 @@ namespace CTG.Gameplay
             MessageTicksLeft = int.MaxValue;
         }
 
-        void Announce(string text, Color color)
+        public void Announce(string text, Color color)
         {
             Message = text;
             MessageColor = color;

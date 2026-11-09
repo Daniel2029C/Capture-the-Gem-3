@@ -24,10 +24,8 @@ namespace CTG.Input
         public Vector2 CursorWorld;
         /// <summary>Drink the healing potion (H).</summary>
         public bool UsePotion;
-        /// <summary>Testing: take a hit (K).</summary>
-        public bool DevHurt;
-        /// <summary>Testing: die instantly (L).</summary>
-        public bool DevKill;
+        /// <summary>Testing: end the match immediately (K).</summary>
+        public bool DevEndMatch;
     }
 
     /// <summary>
@@ -38,7 +36,7 @@ namespace CTG.Input
     public class PlayerInput : MonoBehaviour
     {
         [SerializeField] Camera worldCamera;
-        [Tooltip("Enables testing keys: K = take a hit, L = die.")]
+        [Tooltip("Enables testing keys: K = end the match now.")]
         [SerializeField] bool devKeys = true;
 
         bool m_JumpLatched;
@@ -47,8 +45,7 @@ namespace CTG.Input
         bool m_Ability1Latched;
         int m_HotbarKeyLatched = -1;
         bool m_PotionLatched;
-        bool m_DevHurtLatched;
-        bool m_DevKillLatched;
+        bool m_DevEndLatched;
         float m_ScrollAccumulated;
 
         public void SetCamera(Camera cam) => worldCamera = cam;
@@ -65,8 +62,7 @@ namespace CTG.Input
 
                 if (devKeys)
                 {
-                    if (keyboard.kKey.wasPressedThisFrame) m_DevHurtLatched = true;
-                    if (keyboard.lKey.wasPressedThisFrame) m_DevKillLatched = true;
+                    if (keyboard.kKey.wasPressedThisFrame) m_DevEndLatched = true;
                 }
 
                 for (int i = 0; i < 10; i++)
@@ -96,7 +92,7 @@ namespace CTG.Input
 
             var frame = new InputFrame
             {
-                Ability1 = m_Ability1Latched, HotbarKey = m_HotbarKeyLatched, UsePotion = m_PotionLatched, DevHurt = m_DevHurtLatched, DevKill = m_DevKillLatched,
+                Ability1 = m_Ability1Latched, HotbarKey = m_HotbarKeyLatched, UsePotion = m_PotionLatched, DevEndMatch = m_DevEndLatched,
             };
 
             if (keyboard != null)
@@ -132,8 +128,7 @@ namespace CTG.Input
             m_Ability1Latched = false;
             m_HotbarKeyLatched = -1;
             m_PotionLatched = false;
-            m_DevHurtLatched = false;
-            m_DevKillLatched = false;
+            m_DevEndLatched = false;
             m_ScrollAccumulated = 0f;
             return frame;
         }

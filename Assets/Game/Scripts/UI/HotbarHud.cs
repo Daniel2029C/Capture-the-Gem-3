@@ -265,7 +265,7 @@ namespace CTG.UI
                 $"vel {motor.Velocity.x:0.00}, {motor.Velocity.y:0.00} px/tick   grounded {motor.Grounded}\n" +
                 $"tile {Mathf.FloorToInt(motor.Position.x / 16f)}, {Mathf.FloorToInt(motor.Position.y / 16f)}   " +
                 $"cursor {m_Player.CursorTile.x}, {m_Player.CursorTile.y}\n" +
-                "A/D move · Space jump/unhook · LMB use · RMB alt use / hook · 1-0 / wheel hotbar · H potion · K take a hit · L die";
+                "A/D move · Space jump/unhook · LMB use · RMB alt use / hook · 1-0 / wheel hotbar · H potion · K end match (dev)";
             GUI.Label(new Rect(k_Margin, k_Margin, 700f, 66f), text, m_Label);
         }
 

@@ -59,8 +59,6 @@ namespace CTG.Gameplay
         [SerializeField] float nectarBuffSeconds = 30f;
 
         [Header("Testing")]
-        [SerializeField] int devHurtDamage = 25;
-        [SerializeField] float devHurtKnockback = 1f;
 
         PlayerInput m_Input;
         Vector2 m_SpawnPx;
@@ -83,6 +81,8 @@ namespace CTG.Gameplay
         public GrapplingHooks Hooks { get; private set; }
         /// <summary>The player's own spawn room (world px), or null. Standing in it gives extra regeneration.</summary>
         public Rect? HomeRoomPx { get; set; }
+        /// <summary>No controls reach the player (match countdown, results): they still stand and fall, but can't act.</summary>
+        public bool InputLocked { get; set; }
         public Inventory Inventory { get; private set; }
         public ItemUser ItemUser { get; private set; }
         public InputFrame LastInput { get; private set; }
@@ -222,6 +222,7 @@ namespace CTG.Gameplay
         public void Tick(int tick)
         {
             InputFrame input = m_Input.Consume();
+            if (InputLocked) input = new InputFrame { CursorWorld = input.CursorWorld, HotbarKey = -1 };
             LastInput = input;
             CursorTile = TileWorld.WorldToTile(input.CursorWorld);
 
@@ -311,21 +312,12 @@ namespace CTG.Gameplay
             return dealt;
         }
 
+        /// <summary>Testing: raised when the end-match key is pressed (K); the bootstrap hooks it to the match.</summary>
+        public event System.Action DevEndMatchRequested;
+
         void HandleDevInput(InputFrame input, Vector2 cursorPx)
         {
-            if (input.DevKill)
-            {
-                Health.Kill();
-                Die();
-                return;
-            }
-
-            if (input.DevHurt)
-            {
-                // Pushed away from the cursor, as if hit by something standing there.
-                int direction = cursorPx.x <= Motor.Center.x ? 1 : -1;
-                ApplyHit(new HitInfo { Damage = devHurtDamage, Knockback = devHurtKnockback, Direction = direction });
-            }
+            if (input.DevEndMatch) DevEndMatchRequested?.Invoke();
         }
 
         void Die()

@@ -343,13 +343,22 @@ namespace CTG.Gameplay
             PreviousStepOffset = StepOffset;
             StepOffset = Mathf.MoveTowards(StepOffset, 0f, Mathf.Max(k_MinStepSettleSpeed, Mathf.Abs(Velocity.x)));
 
+            float intendedRise = Velocity.y;
             PlayerCollision.Result r = m_Collision.Move(Position, Velocity, Width, Height, Active.Gravity, Liquid, allowStepUp, DropThrough, m_IgnorePlatforms);
+
+            // Rising into a roof stops the jump even when the collision doesn't flag a ceiling hit (a head already
+            // touching the roof): without this the jump kept pushing upward every tick and the player hung there.
+            bool blockedAbove = intendedRise > 0.01f && r.Velocity.y < intendedRise * 0.5f
+                                && r.Position.y - Position.y < intendedRise * 0.5f;
+            bool hitCeiling = r.HitCeiling || blockedAbove;
+
             Position = r.Position;
             Velocity = r.Velocity;
+            if (blockedAbove && Velocity.y > 0f) Velocity.y = 0f;
             Grounded = r.Grounded;
-            m_HitCeilingLastTick = r.HitCeiling;
+            m_HitCeilingLastTick = hitCeiling;
             StepOffset += r.StepVisual;
-            if (r.HitCeiling) m_JumpTicksLeft = 0;
+            if (hitCeiling) m_JumpTicksLeft = 0;
         }
     }
 }

@@ -97,6 +97,10 @@ namespace CTG
                 MatchHud.Create(transform, gemMatch);
             }
 
+            MatchFlow matchFlow = MatchFlow.Create(transform, clock, Player, gemMatch);
+            if (gemMatch != null) Player.DevEndMatchRequested += gemMatch.DevEnd;
+            MatchFlowHud.Create(transform, matchFlow);
+
             // Registered after the player so projectiles fired this tick also move this tick.
             var projectiles = new GameObject("Projectiles").AddComponent<ProjectileSystem>();
             projectiles.transform.SetParent(transform, false);
@@ -137,7 +141,7 @@ namespace CTG
                 Player.Inventory.Set(1, ItemId.DirtBlock, startingDirt);
                 if (startingWardBlocks > 0) Player.Inventory.Set(3, ItemId.WardBlock, startingWardBlocks);
                 input.Consume(); // drop the click that chose the class
-                clock.enabled = true;
+                matchFlow.ClassChosen();
             });
         }
 
