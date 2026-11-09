@@ -54,6 +54,16 @@ namespace CTG.Combat
             return amount;
         }
 
+        /// <summary>Restores life up to the maximum. Returns the amount actually restored.</summary>
+        public int Heal(int amount)
+        {
+            if (IsDead || amount <= 0) return 0;
+
+            int restored = System.Math.Min(amount, Max - Current);
+            Current += restored;
+            return restored;
+        }
+
         /// <summary>Restores full life and clears immunity (class selection, respawn-like resets).</summary>
         public void Refill()
         {

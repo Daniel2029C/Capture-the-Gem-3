@@ -1,14 +1,14 @@
 using CTG.Combat;
 using CTG.Gameplay;
 using CTG.Items;
+using CTG.Rendering;
 using UnityEngine;
 
 namespace CTG.UI
 {
     /// <summary>
-    /// Development HUD: hotbar (top-left, slots 1-0), life and mana (top-right and
-    /// under the player), death
-    /// countdown, target dummy DPS and a debug readout of movement state.
+    /// Development HUD: hotbar and healing potion (bottom centre), life and mana (top-right and
+    /// under the player), death countdown, target dummy DPS and a debug readout (top-left).
     /// Drawn with IMGUI so it needs no UI assets; replace with the real UI later.
     /// </summary>
     public class HotbarHud : MonoBehaviour
@@ -16,12 +16,20 @@ namespace CTG.UI
         const float k_Slot = 52f;
         const float k_Gap = 4f;
         const float k_Margin = 20f;
+        const float k_PotionSize = 56f;
+        const float k_NameHeight = 22f;
+
+        static float HotbarWidth => Inventory.HotbarSize * k_Slot + (Inventory.HotbarSize - 1) * k_Gap;
+        static float HotbarLeft => (Screen.width - HotbarWidth) * 0.5f;
+        static float HotbarTop => Screen.height - k_Margin - k_Slot;
 
         PlayerCharacter m_Player;
         TargetDummy m_Dummy;
         GUIStyle m_Big;
         GUIStyle m_Count;
         GUIStyle m_Label;
+        GUIStyle m_Big2;
+        GUIStyle m_NameLabel;
         Texture2D m_White;
 
         public bool ShowDebug = true;
@@ -43,6 +51,12 @@ namespace CTG.UI
                 normal = { textColor = Color.white },
             };
             m_Label = new GUIStyle(GUI.skin.label) { fontSize = 14, normal = { textColor = Color.white } };
+            m_NameLabel = new GUIStyle(m_Label) { alignment = TextAnchor.LowerCenter };
+            m_Big2 = new GUIStyle(GUI.skin.label)
+            {
+                fontSize = 24, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter,
+                normal = { textColor = Color.white },
+            };
             m_Big = new GUIStyle(GUI.skin.label)
             {
                 fontSize = 36, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter,
@@ -59,7 +73,7 @@ namespace CTG.UI
 
             for (int i = 0; i < Inventory.HotbarSize; i++)
             {
-                var rect = new Rect(k_Margin + i * (k_Slot + k_Gap), k_Margin, k_Slot, k_Slot);
+                var rect = new Rect(HotbarLeft + i * (k_Slot + k_Gap), HotbarTop, k_Slot, k_Slot);
                 bool selected = i == inventory.SelectedSlot;
 
                 DrawRect(rect, selected ? new Color(1f, 0.85f, 0.3f, 0.9f) : new Color(0.1f, 0.15f, 0.35f, 0.75f));
@@ -76,13 +90,40 @@ namespace CTG.UI
             }
 
             ItemStack held = inventory.Selected;
-            GUI.Label(new Rect(k_Margin, k_Margin + k_Slot + 4f, 400f, 22f), held.IsEmpty ? "" : held.Def.Name, m_Label);
+            GUI.Label(new Rect(HotbarLeft, HotbarTop - k_NameHeight - 2f, HotbarWidth, k_NameHeight),
+                      held.IsEmpty ? "" : held.Def.Name, m_NameLabel);
 
             DrawLife();
             DrawMana();
             DrawOverheadBars();
+            DrawPotion();
             DrawDummyStats();
             if (ShowDebug) DrawDebug();
+        }
+
+        /// <summary>Healing potion icon at the bottom centre: greyed out with the seconds left while cooling down.</summary>
+        void DrawPotion()
+        {
+            HealingPotion potion = m_Player.Potion;
+            // Directly above the hotbar's item name; future ability icons go in this row too.
+            const float size = k_PotionSize;
+            var rect = new Rect((Screen.width - size) * 0.5f, HotbarTop - k_NameHeight - 6f - size, size, size);
+
+            DrawRect(rect, new Color(0.1f, 0.15f, 0.35f, 0.75f));
+            DrawRect(Inset(rect, 3f), new Color(0.2f, 0.3f, 0.6f, 0.85f));
+
+            Color previous = GUI.color;
+            GUI.color = potion.Ready ? Color.white : new Color(0.45f, 0.45f, 0.45f, 0.8f);
+            GUI.DrawTexture(Inset(rect, 8f), PlaceholderSprites.Potion().texture, ScaleMode.ScaleToFit);
+            GUI.color = previous;
+
+            GUI.Label(new Rect(rect.x + 4f, rect.y + 1f, 20f, 18f), "H", m_Label);
+
+            if (!potion.Ready)
+            {
+                int seconds = Mathf.CeilToInt(potion.CooldownLeft / (float)Core.SimUnits.TicksPerSecond);
+                GUI.Label(rect, seconds.ToString(), m_Big2);
+            }
         }
 
         void DrawLife()
@@ -199,8 +240,8 @@ namespace CTG.UI
                 $"vel {motor.Velocity.x:0.00}, {motor.Velocity.y:0.00} px/tick   grounded {motor.Grounded}\n" +
                 $"tile {Mathf.FloorToInt(motor.Position.x / 16f)}, {Mathf.FloorToInt(motor.Position.y / 16f)}   " +
                 $"cursor {m_Player.CursorTile.x}, {m_Player.CursorTile.y}\n" +
-                "A/D move · Space jump · LMB use · RMB alt use · 1-0 / wheel hotbar · K take a hit · L die";
-            GUI.Label(new Rect(k_Margin, Screen.height - 70f, 700f, 66f), text, m_Label);
+                "A/D move · Space jump · LMB use · RMB alt use · 1-0 / wheel hotbar · H potion · K take a hit · L die";
+            GUI.Label(new Rect(k_Margin, k_Margin, 700f, 66f), text, m_Label);
         }
 
         static Rect Inset(Rect r, float by) => new(r.x + by, r.y + by, r.width - by * 2f, r.height - by * 2f);

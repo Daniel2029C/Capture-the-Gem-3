@@ -226,6 +226,53 @@ namespace CTG.Rendering
             return Finish(key, texture, new Vector2(0.5f, 0.5f));
         }
 
+        /// <summary>A 16×16 potion bottle: cork, neck and a round red body with a highlight.</summary>
+        public static Sprite Potion()
+        {
+            const string key = "potion_icon";
+            if (s_Cache.TryGetValue(key, out Sprite cached)) return cached;
+
+            const int size = 16;
+            Texture2D texture = NewTexture(size, size);
+            Color outline = new Color32(30, 20, 30, 255);
+            Color glass = new Color32(200, 40, 55, 255);
+            Color shine = new Color32(255, 150, 160, 255);
+            Color cork = new Color32(170, 120, 70, 255);
+
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    Color c = Color.clear;
+                    float dx = x - 7.5f, dy = y - 5.5f;
+                    bool body = dx * dx + dy * dy <= 28f;
+                    bool neck = x >= 6 && x <= 9 && y >= 9 && y <= 12;
+                    bool stopper = x >= 5 && x <= 10 && y >= 13 && y <= 14;
+                    if (body || neck) c = glass;
+                    if (stopper) c = cork;
+                    if (body && x <= 6 && y >= 6 && y <= 9 && x >= 4) c = shine;
+                    texture.SetPixel(x, y, c);
+                }
+            }
+
+            // Outline: any empty pixel touching a filled one.
+            Color[] pixels = texture.GetPixels();
+            Color[] result = (Color[])pixels.Clone();
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    if (pixels[y * size + x].a > 0f) continue;
+                    bool near = (x > 0 && pixels[y * size + x - 1].a > 0f) || (x < size - 1 && pixels[y * size + x + 1].a > 0f) ||
+                                (y > 0 && pixels[(y - 1) * size + x].a > 0f) || (y < size - 1 && pixels[(y + 1) * size + x].a > 0f);
+                    if (near) result[y * size + x] = outline;
+                }
+            }
+
+            texture.SetPixels(result);
+            return Finish(key, texture, new Vector2(0.5f, 0.5f));
+        }
+
         public static Sprite Square(string key, Color color, int sizePx)
         {
             if (s_Cache.TryGetValue(key, out Sprite cached)) return cached;

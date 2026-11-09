@@ -76,6 +76,13 @@ namespace CTG.Gameplay
         public float StepOffset { get; private set; }
         public float PreviousStepOffset { get; private set; }
 
+        /// <summary>The double jump this player has, or null for none. Set by the class.</summary>
+        public DoubleJumpStats DoubleJump { get; set; }
+        /// <summary>The extra jump is ready to use (refilled whenever grounded).</summary>
+        public bool DoubleJumpAvailable { get; private set; }
+        /// <summary>The extra jump is currently rising.</summary>
+        public bool DoubleJumping { get; private set; }
+
         int m_JumpTicksLeft;
         bool m_ReleasedJump = true;
         bool m_HitCeilingLastTick;
@@ -95,6 +102,7 @@ namespace CTG.Gameplay
             PreviousPosition = bottomLeftPx;
             Velocity = Vector2.zero;
             m_JumpTicksLeft = 0;
+            DoubleJumping = false;
             StepOffset = 0f;
             PreviousStepOffset = 0f;
         }
@@ -108,6 +116,7 @@ namespace CTG.Gameplay
         {
             Velocity = velocityPx;
             m_JumpTicksLeft = 0;
+            DoubleJumping = false;
             if (velocityPx.y > 0f) Grounded = false;
             if (velocityPx.x != 0f) Direction = velocityPx.x > 0f ? -1 : 1; // turn to face the attacker
         }
@@ -133,6 +142,12 @@ namespace CTG.Gameplay
         void HorizontalMovement(bool left, bool right)
         {
             MovementStats s = Stats;
+            if (DoubleJumping && DoubleJump != null)
+            {
+                s.RunAcceleration *= DoubleJump.RunAccelerationMultiplier;
+                s.MaxRunSpeed *= DoubleJump.MaxRunSpeedMultiplier;
+            }
+
             float vx = Velocity.x;
 
             // The first held direction that is still under top speed
@@ -175,6 +190,8 @@ namespace CTG.Gameplay
 
         void JumpMovement(bool jump)
         {
+            if (Grounded) DoubleJumpAvailable = DoubleJump != null;
+
             if (jump)
             {
                 if (m_JumpTicksLeft > 0)
@@ -195,6 +212,14 @@ namespace CTG.Gameplay
                     m_JumpTicksLeft = Stats.JumpHeight;
                     Velocity.y = Stats.JumpSpeed;
                 }
+                else if (m_ReleasedJump && DoubleJumpAvailable && DoubleJump != null)
+                {
+                    // Needs a fresh press, so holding jump through the first jump never spends it.
+                    DoubleJumpAvailable = false;
+                    DoubleJumping = true;
+                    m_JumpTicksLeft = (int)(Stats.JumpHeight * DoubleJump.DurationMultiplier);
+                    Velocity.y = Stats.JumpSpeed;
+                }
 
                 m_ReleasedJump = false;
             }
@@ -203,6 +228,9 @@ namespace CTG.Gameplay
                 m_JumpTicksLeft = 0;
                 m_ReleasedJump = true;
             }
+
+            // The speed bonus lasts only while the extra jump is still rising.
+            if (m_JumpTicksLeft <= 0) DoubleJumping = false;
         }
 
         void ApplyGravity()

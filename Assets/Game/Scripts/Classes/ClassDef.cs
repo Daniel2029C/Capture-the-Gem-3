@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using CTG.Gameplay;
 using CTG.Items;
 
 namespace CTG.Classes
@@ -47,18 +48,22 @@ namespace CTG.Classes
         /// <summary>Flat addition to run acceleration, px/tick².</summary>
         public float BonusRunAcceleration;
 
+        /// <summary>One extra jump in mid-air. Null = none.</summary>
+        public DoubleJumpStats DoubleJump;
+
         /// <summary>Items placed in the inventory on selection, replacing whatever was there.</summary>
         public IReadOnlyList<LoadoutEntry> Loadout = Array.Empty<LoadoutEntry>();
     }
 
     public static class ClassDefs
     {
-        // Archer: 140 life, no mana, Shardstone Pickaxe in slot 1 and Rancor in slot 3. The rest of its
+        // Archer: 140 life, no mana, double jump, Shardstone Pickaxe in slot 1 and Rancor in slot 3. The rest of its
         // CTG2 loadout (potions, armor, accessories, dyes) is left out until those items exist.
         static readonly ClassDef s_Archer = new()
         {
             Id = ClassId.Archer, Name = "Archer", Description = "Charge bow: Hellfire and Shimmer arrows.",
             MaxLife = 140, MaxMana = 0,
+            DoubleJump = new DoubleJumpStats(),
             Loadout = new[]
             {
                 new LoadoutEntry(0, ItemId.ShardstonePickaxe),

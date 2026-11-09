@@ -18,6 +18,8 @@ namespace CTG.Input
         public int HotbarScroll;
         /// <summary>Cursor position in world units.</summary>
         public Vector2 CursorWorld;
+        /// <summary>Drink the healing potion (H).</summary>
+        public bool UsePotion;
         /// <summary>Testing: take a hit (K).</summary>
         public bool DevHurt;
         /// <summary>Testing: die instantly (L).</summary>
@@ -39,6 +41,7 @@ namespace CTG.Input
         bool m_UseLatched;
         bool m_AltLatched;
         int m_HotbarKeyLatched = -1;
+        bool m_PotionLatched;
         bool m_DevHurtLatched;
         bool m_DevKillLatched;
         float m_ScrollAccumulated;
@@ -53,6 +56,7 @@ namespace CTG.Input
             if (keyboard != null)
             {
                 if (keyboard.spaceKey.wasPressedThisFrame) m_JumpLatched = true;
+                if (keyboard.hKey.wasPressedThisFrame) m_PotionLatched = true;
 
                 if (devKeys)
                 {
@@ -83,7 +87,7 @@ namespace CTG.Input
 
             var frame = new InputFrame
             {
-                HotbarKey = m_HotbarKeyLatched, DevHurt = m_DevHurtLatched, DevKill = m_DevKillLatched,
+                HotbarKey = m_HotbarKeyLatched, UsePotion = m_PotionLatched, DevHurt = m_DevHurtLatched, DevKill = m_DevKillLatched,
             };
 
             if (keyboard != null)
@@ -116,6 +120,7 @@ namespace CTG.Input
             m_UseLatched = false;
             m_AltLatched = false;
             m_HotbarKeyLatched = -1;
+            m_PotionLatched = false;
             m_DevHurtLatched = false;
             m_DevKillLatched = false;
             m_ScrollAccumulated = 0f;

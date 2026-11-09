@@ -38,6 +38,13 @@ namespace CTG.Gameplay
         [Tooltip("Maximum mana comes from the class; 0 means no mana.")]
         [SerializeField] float manaRegenPerSecond = 1f;
 
+        [Header("Healing potion")]
+        [SerializeField] int potionHeal = 50;
+        [Tooltip("Seconds before the potion can be used again.")]
+        [SerializeField] float potionCooldownSeconds = 60f;
+        [Tooltip("Allow drinking at full life (wastes the potion).")]
+        [SerializeField] bool potionUsableAtFullLife;
+
         [Header("Testing")]
         [SerializeField] int devHurtDamage = 25;
         [SerializeField] float devHurtKnockback = 1f;
@@ -54,6 +61,7 @@ namespace CTG.Gameplay
         public PlayerMotor Motor { get; private set; }
         public Health Health { get; private set; }
         public Mana Mana { get; private set; }
+        public HealingPotion Potion { get; } = new();
         public Inventory Inventory { get; private set; }
         public ItemUser ItemUser { get; private set; }
         public InputFrame LastInput { get; private set; }
@@ -75,6 +83,7 @@ namespace CTG.Gameplay
             Health = new Health(maxLife, regenPerSecond, hitImmunityTicks,
                                 SimUnits.SecondsToTicks(respawnSeconds));
             Mana = new Mana(0, manaRegenPerSecond);
+            ApplyPotionSettings();
             Inventory = new Inventory();
             ItemUser = new ItemUser(Inventory, tileEditor, this);
 
@@ -100,10 +109,19 @@ namespace CTG.Gameplay
                 Health.RespawnTicks = SimUnits.SecondsToTicks(respawnSeconds);
             }
 
+            ApplyPotionSettings();
+
             if (Mana != null)
             {
                 Mana.RegenPerSecond = manaRegenPerSecond;
             }
+        }
+
+        void ApplyPotionSettings()
+        {
+            Potion.HealAmount = potionHeal;
+            Potion.CooldownTicks = SimUnits.SecondsToTicks(potionCooldownSeconds);
+            Potion.UsableAtFullLife = potionUsableAtFullLife;
         }
 
         MovementStats ClassAdjustedMovement()
@@ -129,6 +147,8 @@ namespace CTG.Gameplay
             Mana.Refill();
             Defense = def.BonusDefense;
             Motor.Stats = ClassAdjustedMovement();
+            Motor.DoubleJump = def.DoubleJump;
+            Potion.Reset();
 
             ItemUser.Cancel();
             for (int i = 0; i < Inventory.SlotCount; i++) Inventory.Set(i, ItemId.None, 0);
@@ -179,6 +199,13 @@ namespace CTG.Gameplay
             {
                 if (Health.Tick()) Respawn();
                 return;
+            }
+
+            Potion.Tick();
+            if (input.UsePotion)
+            {
+                int healed = Potion.TryUse(Health);
+                if (healed >= 0) CombatText.Spawn(Motor.Center, $"+{healed}", CombatText.Healed);
             }
 
             if (ItemUser.CanSwitchItems)
@@ -244,6 +271,7 @@ namespace CTG.Gameplay
 
         void Die()
         {
+            Potion.Reset();
             ItemUser.Cancel();
             Motor.Velocity = Vector2.zero;
             CombatText.Spawn(Motor.Center + new Vector2(0f, 24f), "You died", CombatText.PlayerDamaged);
