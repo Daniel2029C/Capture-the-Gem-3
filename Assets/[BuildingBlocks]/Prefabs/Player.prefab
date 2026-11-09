@@ -25,7 +25,7 @@ Transform:
   m_GameObject: {fileID: 843859430541661325}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.576, y: -0.457, z: 0}
+  m_LocalPosition: {x: 0.807, y: 0.034, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -46,7 +46,7 @@ GameObject:
   - component: {fileID: 1687641758679843737}
   - component: {fileID: 9128761042896281153}
   - component: {fileID: 3470382799008811181}
-  - component: {fileID: 581605950140953784}
+  - component: {fileID: 6564273515889518863}
   m_Layer: 0
   m_Name: Player
   m_TagString: Player
@@ -105,9 +105,9 @@ MonoBehaviour:
   isMovementEnabled: 1
   isTargetingEnabled: 0
   isAttackEnabled: 1
-  gravity: -20
-  fallGravityMultiplier: 1.5
-  maxFallSpeed: 53
+  gravity: -90
+  fallGravityMultiplier: 1
+  maxFallSpeed: 37.5
   groundSlopeLimit: 45
   wallSlopeLimit: 45
   canBeStoodOn: 0
@@ -178,8 +178,8 @@ CapsuleCollider2D:
   m_UsedByEffector: 0
   m_CompositeOperation: 0
   m_CompositeOrder: 0
-  m_Offset: {x: 0.0646514, y: -0.61}
-  m_Size: {x: 0.9893028, y: 2.14}
+  m_Offset: {x: 0.0906, y: -0.18}
+  m_Size: {x: 1.387, y: 3}
   m_Direction: 0
 --- !u!114 &1687641758679843737
 MonoBehaviour:
@@ -362,7 +362,7 @@ MonoBehaviour:
   fullChargeHitStop: 0.06
   fullChargeHitShake: 0.3
   fullChargeHitZoomPunch: 0.05
---- !u!114 &581605950140953784
+--- !u!114 &6564273515889518863
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -375,24 +375,17 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Blocks.Runtime::Blocks.Movement.PlayerMovementAbility
   moveAction: {fileID: -1680190386980627800, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
-  sprintAction: {fileID: -7471211009204490832, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
   jumpAction: {fileID: -2099379676528639254, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
-  walkSpeed: 4
-  runSpeed: 8
-  acceleration: 60
-  deceleration: 80
-  turnGrip: 2
-  airControl: 0.7
-  jumpHeight: 4
-  coyoteTime: 0.15
-  jumpBufferTime: 0.1
-  jumpCooldown: 0.1
-  jumpCutMultiplier: 0.5
-  apexGravityMultiplier: 0.35
-  apexThreshold: 1.5
+  maxRunSpeed: 11.25
+  runAcceleration: 18
+  runSlowdown: 45
+  jumpSpeed: 18.79
+  jumpHoldTime: 0.25
+  coyoteTime: 0
+  jumpBufferTime: 0
+  jumpCooldown: 0
   staminaStat: 2
-  sprintCostPerSecond: 4
-  jumpCost: 10
+  jumpCost: 0
   jumpVfxPrefab: {fileID: 4966737297164599351, guid: 3dcf6d9d9f01e4dca81bbefe5438b7fc, type: 3}
   landVfxPrefab: {fileID: 4966737297164599351, guid: 3dcf6d9d9f01e4dca81bbefe5438b7fc, type: 3}
   runDustVfxPrefab: {fileID: 4966737297164599351, guid: 3dcf6d9d9f01e4dca81bbefe5438b7fc, type: 3}
@@ -403,7 +396,7 @@ MonoBehaviour:
   - {fileID: 8300000, guid: 907f4ab2634e848238f3a661b345cb0d, type: 3}
   - {fileID: 8300000, guid: 8e80ccea3b1d643e2834f689756208d1, type: 3}
   - {fileID: 8300000, guid: 35e8c845f562541b9bc726d2a1f722f2, type: 3}
-  footstepStride: 1.75
+  footstepStride: 3.5
   footstepVolume: 1
   jumpClip: {fileID: 8300000, guid: 4f97c4a071113471580ead42599419c1, type: 3}
   jumpVolume: 1
@@ -439,7 +432,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: -1.65, z: 0}
-  m_LocalScale: {x: 0.3, y: 0.3, z: 0.3}
+  m_LocalScale: {x: 0.4206, y: 0.4206, z: 0.4206}
   m_ConstrainProportionsScale: 1
   m_Children: []
   m_Father: {fileID: 6979650397637699344}
@@ -609,6 +602,9 @@ MonoBehaviour:
   m_ShadowSoftnessFalloffIntensity: 0.5
   m_ShadowVolumeIntensityEnabled: 0
   m_ShadowVolumeIntensity: 0.75
+  m_RenderingLayersMask:
+    serializedVersion: 0
+    m_Bits: 1
   m_LocalBounds:
     m_Center: {x: 0, y: -0.00000011920929, z: 0}
     m_Extent: {x: 0.9985302, y: 0.99853027, z: 0}

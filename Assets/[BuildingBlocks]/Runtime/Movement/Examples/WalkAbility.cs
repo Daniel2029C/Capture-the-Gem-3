@@ -14,12 +14,12 @@ namespace Blocks.Movement.Examples
         [SerializeField] InputActionReference sprintAction;
 
         [Header("Speed")]
-        [SerializeField] float moveSpeed = 4.0f;
-        [SerializeField] float sprintSpeed = 6.0f;
+        [SerializeField] float moveSpeed = 100.0f;
+        [SerializeField] float sprintSpeed = 100.0f;
         [SerializeField] float speedChangeRate = 10.0f;
 
         [Header("Air Control")]
-        [SerializeField][Range(0f, 1f)] float airControl = 0.5f;
+        [SerializeField][Range(0f, 1f)] float airControl = 1f;
 
         [Header("Stat Cost")]
         [SerializeField] StatType sprintStatType = StatType.Stamina;

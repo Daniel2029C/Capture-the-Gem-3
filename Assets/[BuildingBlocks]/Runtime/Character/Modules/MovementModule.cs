@@ -356,6 +356,13 @@ namespace Blocks.Character
             m_CoyoteInvalidated = true;
         }
 
+        /// <summary>Launches upward at an explicit speed instead of deriving it from a target height.</summary>
+        public void JumpWithSpeed(float speed)
+        {
+            SetVerticalVelocity(speed);
+            m_CoyoteInvalidated = true;
+        }
+
         public void AddMovement(Vector2 movement) => m_AdditiveMovement += movement;
 
         /// <summary>

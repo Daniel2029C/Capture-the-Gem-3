@@ -29,9 +29,10 @@ namespace Blocks.Character
         [SerializeField] bool isAttackEnabled = true;
 
         [Header("Movement")]
-        [SerializeField] float gravity = -20.0f;
-        [SerializeField] float fallGravityMultiplier = 1.5f;
-        [SerializeField] float maxFallSpeed = 53.0f;
+        // Terraria defaults converted to units (1 block = 1 unit = 16 px): 0.4 px/tick² and 10 px/tick.
+        [SerializeField] float gravity = -90.0f;
+        [SerializeField] float fallGravityMultiplier = 1.0f;
+        [SerializeField] float maxFallSpeed = 37.5f;
         [SerializeField][Range(1f, 89f)] float groundSlopeLimit = 45f;
         [SerializeField][Range(1f, 89f)] float wallSlopeLimit = 45f;
 
@@ -606,6 +607,15 @@ namespace Blocks.Character
             if (IsStunned || IsAttackMovementLocked || m_HitReactionModule.IsReacting) return;
 
             m_MovementModule.Jump(height, gravity);
+            OnJump?.Invoke();
+        }
+
+        /// <summary>Jump at an explicit launch speed (units/second) rather than a target height.</summary>
+        public void JumpWithSpeed(float speed)
+        {
+            if (IsStunned || IsAttackMovementLocked || m_HitReactionModule.IsReacting) return;
+
+            m_MovementModule.JumpWithSpeed(speed);
             OnJump?.Invoke();
         }
 
