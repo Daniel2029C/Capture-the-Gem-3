@@ -58,7 +58,7 @@ namespace CTG.World
                 {
                     if (ColumnBlocked(world, column, rowBottom, rowTop))
                     {
-                        x = column * TerrariaUnits.PixelsToTileSize - width;
+                        x = column * TerrariaUnits.PixelsPerTile - width;
                         vx = 0f;
                         result.HitRight = true;
                         return;
@@ -74,7 +74,7 @@ namespace CTG.World
                 {
                     if (ColumnBlocked(world, column, rowBottom, rowTop))
                     {
-                        x = (column + 1) * TerrariaUnits.PixelsToTileSize;
+                        x = (column + 1) * TerrariaUnits.PixelsPerTile;
                         vx = 0f;
                         result.HitLeft = true;
                         return;
@@ -101,7 +101,7 @@ namespace CTG.World
                 {
                     if (RowBlocked(world, row, columnLeft, columnRight))
                     {
-                        y = row * TerrariaUnits.PixelsToTileSize - height;
+                        y = row * TerrariaUnits.PixelsPerTile - height;
                         vy = 0f;
                         result.HitCeiling = true;
                         return;
@@ -117,7 +117,7 @@ namespace CTG.World
                 {
                     if (RowBlocked(world, row, columnLeft, columnRight))
                     {
-                        y = (row + 1) * TerrariaUnits.PixelsToTileSize;
+                        y = (row + 1) * TerrariaUnits.PixelsPerTile;
                         vy = 0f;
                         result.HitFloor = true;
                         return;
