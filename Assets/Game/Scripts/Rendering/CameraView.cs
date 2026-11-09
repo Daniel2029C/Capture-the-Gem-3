@@ -12,14 +12,14 @@ namespace CTG.Rendering
         /// </summary>
         FixedReferenceHeight,
         /// <summary>
-        /// Terraria's own behaviour: one world pixel per screen pixel at zoom 1, so higher resolutions see more.
+        /// One world pixel per screen pixel at zoom 1, so higher resolutions see more.
         /// </summary>
         PixelPerfect,
     }
 
     /// <summary>
-    /// Terraria-style camera: locked to the player's centre (no smoothing) and sized so that at 1920×1080
-    /// and zoom 1 it shows 1080 / 16 = 67.5 tiles of height, like Terraria at 100% zoom. Resolution and
+    /// Camera locked to the player's centre (no smoothing) and sized so that at 1920×1080
+    /// and zoom 1 it shows 1080 / 16 = 67.5 tiles of height. Resolution and
     /// zoom can change at runtime through <see cref="DisplaySettings"/>; the size is recomputed whenever the
     /// screen size or settings change.
     /// </summary>
@@ -34,7 +34,7 @@ namespace CTG.Rendering
 
         Vector2 m_WorldSizeTiles;
 
-        /// <param name="worldSizeTiles">World size; the view is kept inside it, as Terraria does at map edges.</param>
+        /// <param name="worldSizeTiles">World size; the view is kept inside it at map edges.</param>
         public void Bind(PlayerCharacter target, Vector2 worldSizeTiles)
         {
             m_Camera = GetComponent<Camera>();
@@ -52,7 +52,7 @@ namespace CTG.Rendering
                 ? Screen.height
                 : settings.ReferenceHeight;
 
-            float visibleTiles = pixelHeight / TerrariaUnits.PixelsPerTile / zoom;
+            float visibleTiles = pixelHeight / SimUnits.PixelsPerTile / zoom;
             m_Camera.orthographicSize = visibleTiles * 0.5f;
 
             m_LastScreenHeight = Screen.height;
@@ -72,7 +72,7 @@ namespace CTG.Rendering
 
             // The player's interpolated transform sits at the hitbox's bottom-centre.
             Vector3 feet = m_Target.transform.position;
-            float halfHeight = m_Target.Motor.Height * 0.5f / TerrariaUnits.PixelsPerTile;
+            float halfHeight = m_Target.Motor.Height * 0.5f / SimUnits.PixelsPerTile;
             Vector2 focus = new Vector2(feet.x, feet.y + halfHeight);
             transform.position = new Vector3(ClampAxis(focus.x, m_Camera.orthographicSize * m_Camera.aspect, m_WorldSizeTiles.x),
                                              ClampAxis(focus.y, m_Camera.orthographicSize, m_WorldSizeTiles.y),
@@ -96,7 +96,7 @@ namespace CTG.Rendering
         public int Width = 1920;
         public int Height = 1080;
         public FullScreenMode WindowMode = FullScreenMode.FullScreenWindow;
-        /// <summary>1 = Terraria's 100% zoom. Terraria allows 100%-200%.</summary>
+        /// <summary>1 = 100% zoom (one world pixel per reference-screen pixel).</summary>
         public float Zoom = 1f;
         public ViewScaling Scaling = ViewScaling.FixedReferenceHeight;
         /// <summary>Screen height whose view FixedReferenceHeight reproduces at any resolution.</summary>

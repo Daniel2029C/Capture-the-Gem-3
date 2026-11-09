@@ -6,7 +6,7 @@ namespace CTG.World
 {
     /// <summary>
     /// The authoritative tile grid. Tile (x, y) covers world units [x, x+1) × [y, y+1), i.e. pixels
-    /// [x*16, x*16+16) × [y*16, y*16+16), y-up. Outside the world counts as solid, like Terraria's edges.
+    /// [x*16, x*16+16) × [y*16, y*16+16), y-up. Outside the world counts as solid.
     /// Pure data plus edit rules; rendering listens to <see cref="TileChanged"/>.
     /// </summary>
     public class TileWorld
@@ -49,10 +49,10 @@ namespace CTG.World
         public bool AnySolidInPixelRect(float left, float bottom, float width, float height)
         {
             const float epsilon = 0.001f;
-            int x0 = TerrariaUnits.PixelToTile(left + epsilon);
-            int x1 = TerrariaUnits.PixelToTile(left + width - epsilon);
-            int y0 = TerrariaUnits.PixelToTile(bottom + epsilon);
-            int y1 = TerrariaUnits.PixelToTile(bottom + height - epsilon);
+            int x0 = SimUnits.PixelToTile(left + epsilon);
+            int x1 = SimUnits.PixelToTile(left + width - epsilon);
+            int y0 = SimUnits.PixelToTile(bottom + epsilon);
+            int y1 = SimUnits.PixelToTile(bottom + height - epsilon);
 
             for (int y = y0; y <= y1; y++)
             {

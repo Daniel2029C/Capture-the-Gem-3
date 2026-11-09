@@ -1,3 +1,4 @@
+using CTG.Combat;
 using CTG.Core;
 using CTG.Gameplay;
 using CTG.Items;
@@ -26,10 +27,15 @@ namespace CTG
         [SerializeField] ItemId pickaxe = ItemId.ShardstonePickaxe;
         [SerializeField] int startingDirt = 300;
 
+        [Header("Testing")]
+        [Tooltip("Tiles right of the player spawn where the target dummy stands.")]
+        [SerializeField] int dummyOffsetTiles = 6;
+
         [SerializeField] Camera worldCamera;
 
         public TileWorld World { get; private set; }
         public PlayerCharacter Player { get; private set; }
+        public TargetDummy Dummy { get; private set; }
 
         void Awake()
         {
@@ -55,8 +61,8 @@ namespace CTG
 
             var playerGo = new GameObject("Player");
             Player = playerGo.AddComponent<PlayerCharacter>();
-            float spawnX = worldWidth * 0.5f * TerrariaUnits.PixelsPerTile - PlayerCharacter.HitboxWidthPx * 0.5f;
-            float spawnY = floorDepth * TerrariaUnits.PixelsPerTile;
+            float spawnX = worldWidth * 0.5f * SimUnits.PixelsPerTile - PlayerCharacter.HitboxWidthPx * 0.5f;
+            float spawnY = floorDepth * SimUnits.PixelsPerTile;
             Player.Initialize(World, editor, input, new Vector2(spawnX, spawnY));
 
             Player.Inventory.Set(0, pickaxe, 1);
@@ -72,9 +78,19 @@ namespace CTG
             cursor.transform.SetParent(transform, false);
             cursor.Bind(Player, World, editor);
 
+            var combatText = new GameObject("Combat Text").AddComponent<CombatText>();
+            combatText.transform.SetParent(transform, false);
+
+            // Testing target a few tiles right of spawn, standing on the floor.
+            var dummyGo = new GameObject("Target Dummy");
+            dummyGo.transform.SetParent(transform, false);
+            Dummy = dummyGo.AddComponent<TargetDummy>();
+            float dummyX = (worldWidth * 0.5f + dummyOffsetTiles) * SimUnits.PixelsPerTile;
+            Dummy.Initialize(new Vector2(dummyX, floorDepth * SimUnits.PixelsPerTile));
+
             var hud = new GameObject("HUD").AddComponent<HotbarHud>();
             hud.transform.SetParent(transform, false);
-            hud.Bind(Player);
+            hud.Bind(Player, Dummy);
         }
 
         static void GenerateFlatFloor(TileWorld world, int depth)

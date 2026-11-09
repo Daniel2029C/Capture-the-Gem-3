@@ -15,7 +15,7 @@ namespace CTG.Items
     }
 
     /// <summary>
-    /// Terraria-style inventory: 50 main slots, the first 10 being the hotbar.
+    /// Inventory: 50 main slots, the first 10 being the hotbar.
     /// </summary>
     public class Inventory
     {
@@ -46,8 +46,8 @@ namespace CTG.Items
         }
 
         /// <summary>
-        /// Adds items, topping up existing stacks first and then filling empty slots in order, as Terraria
-        /// does. Returns how many didn't fit; the caller decides what happens to those (CTG rule: lost).
+        /// Adds items, topping up existing stacks first and then filling empty slots in order.
+        /// Returns how many didn't fit; the caller decides what happens to those (CTG rule: lost).
         /// </summary>
         public int Add(ItemId id, int count)
         {

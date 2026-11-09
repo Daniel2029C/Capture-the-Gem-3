@@ -12,7 +12,7 @@ namespace CTG.Core
     /// <summary>
     /// Fixed 60 Hz simulation loop, independent of frame rate and of Unity's physics timestep.
     /// Rendering interpolates between the last two ticks using <see cref="Alpha"/>. Keeping gameplay on
-    /// discrete ticks is what lets Terraria's per-tick numbers port exactly, and is what a networked
+    /// discrete ticks is what lets per-tick tuning values port exactly, and is what a networked
     /// simulation will need later.
     /// </summary>
     [DefaultExecutionOrder(-100)]
@@ -61,9 +61,9 @@ namespace CTG.Core
         {
             m_Accumulator += Mathf.Min(Time.deltaTime, k_MaxFrameTime);
 
-            while (m_Accumulator >= TerrariaUnits.TickSeconds)
+            while (m_Accumulator >= SimUnits.TickSeconds)
             {
-                m_Accumulator -= TerrariaUnits.TickSeconds;
+                m_Accumulator -= SimUnits.TickSeconds;
                 BeforeTick?.Invoke();
 
                 for (int i = 0; i < m_Tickables.Count; i++)
@@ -74,7 +74,7 @@ namespace CTG.Core
                 CurrentTick++;
             }
 
-            Alpha = m_Accumulator / TerrariaUnits.TickSeconds;
+            Alpha = m_Accumulator / SimUnits.TickSeconds;
         }
     }
 }

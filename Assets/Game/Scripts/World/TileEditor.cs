@@ -6,7 +6,7 @@ using UnityEngine;
 namespace CTG.World
 {
     /// <summary>
-    /// Gameplay rules for changing tiles: mining with accumulated damage (Terraria's HitTile) and placing
+    /// Gameplay rules for changing tiles: mining with accumulated damage and placing
     /// blocks. Kept separate from item-use timing so a server can run exactly this code on requests later.
     /// CTG2 rules: only breakable tile types can be mined, blocks can't replace an existing tile, and
     /// mined blocks go straight into the miner's inventory instead of dropping on the ground.
@@ -14,10 +14,10 @@ namespace CTG.World
     public class TileEditor
     {
         /// <summary>
-        /// Damage on a tile that isn't hit again within this many ticks is forgotten. Terraria's HitTile
-        /// also forgets partial damage after a while; the exact duration isn't ported yet.
+        /// Damage on a tile that isn't hit again within this many ticks is forgotten.
+        /// Tuned by feel.
         /// </summary>
-        const int k_DamageForgetTicks = 3 * TerrariaUnits.TicksPerSecond;
+        const int k_DamageForgetTicks = 3 * SimUnits.TicksPerSecond;
 
         struct TileDamage
         {
@@ -79,7 +79,7 @@ namespace CTG.World
         }
 
         /// <summary>
-        /// Terraria needs a neighbouring tile (or wall) to place against: blocks can't float in mid-air.
+        /// A block needs a neighbouring tile (or wall) to place against: blocks can't float in mid-air.
         /// CTG2 additionally forbids replacing an existing tile. The tile also can't overlap a player.
         /// </summary>
         public bool CanPlace(Vector2Int tile, TileId type, Rect blockerPixels)
@@ -88,8 +88,8 @@ namespace CTG.World
             if (m_World.Get(tile.x, tile.y) != TileId.Air) return false;
             if (!TileDefs.Get(type).Placeable) return false;
 
-            var tileRect = new Rect(tile.x * TerrariaUnits.PixelsPerTile, tile.y * TerrariaUnits.PixelsPerTile,
-                                    TerrariaUnits.PixelsPerTile, TerrariaUnits.PixelsPerTile);
+            var tileRect = new Rect(tile.x * SimUnits.PixelsPerTile, tile.y * SimUnits.PixelsPerTile,
+                                    SimUnits.PixelsPerTile, SimUnits.PixelsPerTile);
             if (tileRect.Overlaps(blockerPixels)) return false;
 
             return HasSolidNeighbour(tile);

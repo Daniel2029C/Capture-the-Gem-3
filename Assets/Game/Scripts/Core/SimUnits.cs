@@ -1,12 +1,12 @@
 namespace CTG.Core
 {
     /// <summary>
-    /// The simulation works in Terraria's native units so values from Terraria and CTG2 port verbatim:
+    /// The simulation works in fixed pixel/tick units so tuned gameplay values (CTG2's included) port verbatim:
     /// positions in pixels, velocities in pixels per tick, durations in ticks (60 per second).
     /// One tile is 16 px, and one tile is one Unity world unit for rendering.
-    /// Coordinates are y-up (Unity convention), unlike Terraria's y-down screen space.
+    /// Coordinates are y-up (Unity convention).
     /// </summary>
-    public static class TerrariaUnits
+    public static class SimUnits
     {
         public const int TicksPerSecond = 60;
         public const float TickSeconds = 1f / TicksPerSecond;

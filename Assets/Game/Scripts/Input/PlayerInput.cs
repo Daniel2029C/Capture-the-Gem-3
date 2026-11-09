@@ -3,7 +3,7 @@ using UnityEngine.InputSystem;
 
 namespace CTG.Input
 {
-    /// <summary>One tick's worth of player controls, mirroring Terraria's control* flags.</summary>
+    /// <summary>One tick's worth of player controls.</summary>
     public struct InputFrame
     {
         public bool Left;
@@ -16,6 +16,10 @@ namespace CTG.Input
         public int HotbarScroll;
         /// <summary>Cursor position in world units.</summary>
         public Vector2 CursorWorld;
+        /// <summary>Testing: take a hit (K).</summary>
+        public bool DevHurt;
+        /// <summary>Testing: die instantly (L).</summary>
+        public bool DevKill;
     }
 
     /// <summary>
@@ -26,10 +30,14 @@ namespace CTG.Input
     public class PlayerInput : MonoBehaviour
     {
         [SerializeField] Camera worldCamera;
+        [Tooltip("Enables testing keys: K = take a hit, L = die.")]
+        [SerializeField] bool devKeys = true;
 
         bool m_JumpLatched;
         bool m_UseLatched;
         int m_HotbarKeyLatched = -1;
+        bool m_DevHurtLatched;
+        bool m_DevKillLatched;
         float m_ScrollAccumulated;
 
         public void SetCamera(Camera cam) => worldCamera = cam;
@@ -43,9 +51,15 @@ namespace CTG.Input
             {
                 if (keyboard.spaceKey.wasPressedThisFrame) m_JumpLatched = true;
 
+                if (devKeys)
+                {
+                    if (keyboard.kKey.wasPressedThisFrame) m_DevHurtLatched = true;
+                    if (keyboard.lKey.wasPressedThisFrame) m_DevKillLatched = true;
+                }
+
                 for (int i = 0; i < 10; i++)
                 {
-                    // Terraria layout: keys 1..9 then 0 map to slots 0..9.
+                    // Keys 1..9 then 0 map to slots 0..9.
                     Key key = i == 9 ? Key.Digit0 : Key.Digit1 + i;
                     if (keyboard[key].wasPressedThisFrame) m_HotbarKeyLatched = i;
                 }
@@ -63,7 +77,10 @@ namespace CTG.Input
             Keyboard keyboard = Keyboard.current;
             Mouse mouse = Mouse.current;
 
-            var frame = new InputFrame { HotbarKey = m_HotbarKeyLatched };
+            var frame = new InputFrame
+            {
+                HotbarKey = m_HotbarKeyLatched, DevHurt = m_DevHurtLatched, DevKill = m_DevKillLatched,
+            };
 
             if (keyboard != null)
             {
@@ -93,6 +110,8 @@ namespace CTG.Input
             m_JumpLatched = false;
             m_UseLatched = false;
             m_HotbarKeyLatched = -1;
+            m_DevHurtLatched = false;
+            m_DevKillLatched = false;
             m_ScrollAccumulated = 0f;
             return frame;
         }

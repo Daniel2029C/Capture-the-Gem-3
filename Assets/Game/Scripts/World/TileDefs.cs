@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace CTG.World
 {
-    /// <summary>Tile type ids. Values follow Terraria's TileID where a Terraria equivalent exists.</summary>
+    /// <summary>Tile type ids. Values match the tile type ids used in the CTG2 map files.</summary>
     public enum TileId : ushort
     {
         Air = ushort.MaxValue,
@@ -21,8 +21,7 @@ namespace CTG.World
         public readonly bool Placeable;
         /// <summary>
         /// Multiplier on pickaxe power per hit. A tile breaks once accumulated damage reaches 100.
-        /// Terraria doubles pickaxe damage on soft tiles like dirt and mud (verify against
-        /// Player.GetPickaxeDamage when more tile types are added).
+        /// Soft tiles like dirt and mud take double pickaxe damage.
         /// </summary>
         public readonly float PickDamageMultiplier;
         /// <summary>Item granted to the miner when the tile breaks.</summary>

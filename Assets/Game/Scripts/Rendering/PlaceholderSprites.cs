@@ -25,7 +25,7 @@ namespace CTG.Rendering
         {
             texture.Apply();
             Sprite sprite = Sprite.Create(texture, new Rect(0, 0, texture.width, texture.height), pivot,
-                                          TerrariaUnits.PixelsPerTile);
+                                          SimUnits.PixelsPerTile);
             sprite.name = key;
             s_Cache[key] = sprite;
             return sprite;
@@ -36,7 +36,7 @@ namespace CTG.Rendering
         {
             if (s_Cache.TryGetValue(key, out Sprite cached)) return cached;
 
-            const int size = TerrariaUnits.PixelsPerTile;
+            const int size = SimUnits.PixelsPerTile;
             Texture2D texture = NewTexture(size, size);
             var random = new System.Random(key.GetHashCode());
 
@@ -86,6 +86,46 @@ namespace CTG.Rendering
                 for (int dx = 0; dx < 2; dx++)
                 {
                     texture.SetPixel(widthPx - 5 + dx, eyeY + dy, outline);
+                }
+            }
+
+            return Finish(key, texture, new Vector2(0.5f, 0f));
+        }
+
+        /// <summary>Straw target dummy: a post with a round head and a target ring on the body.</summary>
+        public static Sprite Dummy(int widthPx, int heightPx)
+        {
+            string key = $"dummy_{widthPx}x{heightPx}";
+            if (s_Cache.TryGetValue(key, out Sprite cached)) return cached;
+
+            Texture2D texture = NewTexture(widthPx, heightPx);
+            Color straw = new Color32(214, 180, 100, 255);
+            Color wood = new Color32(110, 75, 40, 255);
+            Color ring = new Color32(200, 50, 50, 255);
+            Color outline = new Color32(40, 30, 20, 255);
+            int cx = widthPx / 2;
+
+            for (int y = 0; y < heightPx; y++)
+            {
+                for (int x = 0; x < widthPx; x++)
+                {
+                    Color c = Color.clear;
+                    bool post = Mathf.Abs(x - cx) <= 1 && y < heightPx / 4;
+                    bool body = y >= heightPx / 4 && y < heightPx * 3 / 4 && x >= 2 && x < widthPx - 2;
+                    float hx = x - cx + 0.5f, hy = y - heightPx * 7 / 8f;
+                    bool head = hx * hx + hy * hy <= (widthPx / 3f) * (widthPx / 3f);
+
+                    if (post) c = wood;
+                    if (body || head) c = straw;
+                    if (body)
+                    {
+                        float dx = x - cx + 0.5f, dy = y - heightPx / 2f;
+                        float d = Mathf.Sqrt(dx * dx + dy * dy);
+                        if (d < 2f || (d > 4f && d < 6f)) c = ring;
+                        if (x == 2 || x == widthPx - 3 || y == heightPx / 4 || y == heightPx * 3 / 4 - 1) c = outline;
+                    }
+
+                    texture.SetPixel(x, y, c);
                 }
             }
 
@@ -150,7 +190,7 @@ namespace CTG.Rendering
         {
             if (s_Cache.TryGetValue(key, out Sprite cached)) return cached;
 
-            const int size = TerrariaUnits.PixelsPerTile;
+            const int size = SimUnits.PixelsPerTile;
             Texture2D texture = NewTexture(size, size);
             for (int y = 0; y < size; y++)
             {
