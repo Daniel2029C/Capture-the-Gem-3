@@ -75,7 +75,7 @@ namespace CTG.Classes
             },
         };
 
-        // Tree: 150 life, no mana, and only the Upgraded Shardstone Pickaxe (plus the blocks every class
+        // Tree: 150 life, no mana, the Upgraded Shardstone Pickaxe and the Grove Boomerang (plus the blocks every class
         // gets). Its ability 1 is the Foliage Tendrils hook.
         static readonly ClassDef s_Tree = new()
         {
@@ -85,6 +85,7 @@ namespace CTG.Classes
             Loadout = new[]
             {
                 new LoadoutEntry(0, ItemId.UpgradedShardstonePickaxe),
+                new LoadoutEntry(2, ItemId.GroveBoomerang),
             },
         };
 

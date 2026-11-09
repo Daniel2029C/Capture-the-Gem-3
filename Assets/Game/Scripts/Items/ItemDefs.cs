@@ -17,6 +17,7 @@ namespace CTG.Items
         UpgradedShardstonePickaxe = 10001,
         Rancor = 10002,
         WardBlock = 10003,
+        GroveBoomerang = 10004,
     }
 
     public enum UseStyle
@@ -26,6 +27,8 @@ namespace CTG.Items
         Swing,
         /// <summary>Hold to draw and charge, release to loose an arrow (see <see cref="ChargeBowStats"/>).</summary>
         ChargeBow,
+        /// <summary>Throws a projectile toward the cursor when used (see <see cref="ItemDef.UseDelayTicks"/>).</summary>
+        Throw,
     }
 
     /// <summary>
@@ -78,6 +81,8 @@ namespace CTG.Items
         public int UseAnimation;
         /// <summary>Ticks between actions (tile hits/placements) within a use.</summary>
         public int UseTime;
+        /// <summary>Minimum ticks between throws of this item, counted from one throw to the next. Kept across item switches.</summary>
+        public int UseDelayTicks;
         /// <summary>Keep using while the button is held.</summary>
         public bool AutoReuse;
         /// <summary>Pickaxe power. 0 = not a pickaxe.</summary>
@@ -100,6 +105,8 @@ namespace CTG.Items
         public Color IconColor = Color.white;
         /// <summary>Base projectile speed, px/update.</summary>
         public float ShootSpeed;
+        /// <summary>The projectile a <see cref="UseStyle.Throw"/> item throws.</summary>
+        public Combat.ProjectileId Projectile;
         /// <summary>Charge bow tuning; set for <see cref="UseStyle.ChargeBow"/> items.</summary>
         public ChargeBowStats ChargeBow;
 
@@ -164,8 +171,20 @@ namespace CTG.Items
             IconColor = new Color32(120, 220, 255, 255),
         };
 
+        // Tree's boomerang: damage 32, shoot speed 12, useTime/useAnimation 20, no auto-reuse, and a 52-tick delay
+        // between throws. Knockback is 1 (the standard player knockback): CTG2's item lists 6, but there every
+        // player hit used the standard knockback.
+        static readonly ItemDef s_GroveBoomerang = new()
+        {
+            Id = ItemId.GroveBoomerang, Name = "Grove Boomerang", UseStyle = UseStyle.Throw,
+            UseAnimation = 20, UseTime = 20, UseDelayTicks = 52, AutoReuse = false,
+            Damage = 32, Knockback = 1f, ShootSpeed = 12f, Projectile = Combat.ProjectileId.GroveBoomerang,
+            IconColor = new Color32(235, 205, 70, 255),
+        };
+
         public static ItemDef Get(ItemId id) => id switch
         {
+            ItemId.GroveBoomerang => s_GroveBoomerang,
             ItemId.WardBlock => s_Ward,
             ItemId.Rancor => s_Rancor,
             ItemId.DirtBlock => s_Dirt,

@@ -43,6 +43,7 @@ namespace CTG.Gameplay
         public int BonusTileReach;
 
         bool m_ReleasedUse = true;
+        int m_ThrowReadyTick = int.MinValue / 2;
         /// <summary>The previous use was cut short by a switch: the next use keeps the remaining action cooldown instead of resetting it.</summary>
         bool m_CarryCooldown;
 
@@ -91,7 +92,8 @@ namespace CTG.Gameplay
 
             if (ItemAnimation == 0 && useHeld && !held.IsEmpty && def.UseStyle != UseStyle.None)
             {
-                if (def.AutoReuse || m_ReleasedUse)
+                bool throwReady = def.UseStyle != UseStyle.Throw || tick >= m_ThrowReadyTick;
+                if ((def.AutoReuse || m_ReleasedUse) && throwReady)
                 {
                     ItemAnimation = def.UseAnimation;
                     ItemAnimationMax = def.UseAnimation;
@@ -100,6 +102,8 @@ namespace CTG.Gameplay
                     UsingItem = held.Id;
                     UseDirection = cursorPx.x >= motor.Center.x ? 1 : -1;
                     m_HitThisUse.Clear();
+
+                    if (def.UseStyle == UseStyle.Throw) Throw(tick, def, cursorPx, motor);
                 }
             }
 
@@ -137,6 +141,19 @@ namespace CTG.Gameplay
             ItemAnimation = 0;
             m_CarryCooldown = true;
             Bow.CancelBySwitch(tick);
+        }
+
+        /// <summary>Throws the item's projectile from the player's centre toward the cursor.</summary>
+        void Throw(int tick, ItemDef def, Vector2 cursorPx, PlayerMotor motor)
+        {
+            m_ThrowReadyTick = tick + def.UseDelayTicks;
+
+            ProjectileSystem projectiles = ProjectileSystem.Instance;
+            if (projectiles == null) return;
+
+            Vector2 aim = cursorPx - motor.Center;
+            Vector2 direction = aim.sqrMagnitude < 0.0001f ? new Vector2(UseDirection, 0f) : aim.normalized;
+            projectiles.Spawn(def.Projectile, m_Owner, motor.Center, direction * def.ShootSpeed, def.Damage, def.Knockback, 0);
         }
 
         void TickMelee(PlayerMotor motor)

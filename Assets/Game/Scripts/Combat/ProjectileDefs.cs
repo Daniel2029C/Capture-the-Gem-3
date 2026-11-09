@@ -9,6 +9,8 @@ namespace CTG.Combat
         HellfireArrow = 1,
         /// <summary>Rises after a short delay (inverted gravity) and stops at the first target.</summary>
         ShimmerArrow = 2,
+        /// <summary>Thrown by the Tree: flies out, turns back, and homes in on its owner.</summary>
+        GroveBoomerang = 3,
     }
 
     /// <summary>
@@ -16,6 +18,23 @@ namespace CTG.Combat
     /// extra updates runs several updates per tick, so it moves (and falls) faster in real time.
     /// Velocities are y-up.
     /// </summary>
+    /// <summary>
+    /// Boomerang flight: straight out for <see cref="OutboundUpdates"/> updates (or until it hits a tile or a
+    /// target), then back to the owner, ignoring tiles, accelerating toward them up to a top speed. It ends on
+    /// touching the owner, and is dropped if it ever gets 3000 px away.
+    /// </summary>
+    public sealed class BoomerangStats
+    {
+        public int OutboundUpdates = 30;
+        /// <summary>Top speed on the way back, px/update. Raised from the original 9 for a snappier return.</summary>
+        public float ReturnMaxSpeed = 17f;
+        /// <summary>Speed gained per update toward the owner (doubled while still moving away from them). Original 0.4.</summary>
+        public float ReturnAccel = 1f;
+        /// <summary>Updates before the same target can be hit again.</summary>
+        public int RehitCooldownUpdates = 10;
+        public float MaxOwnerDistancePx = 3000f;
+    }
+
     public sealed class ProjectileDef
     {
         public ProjectileId Id;
@@ -39,6 +58,8 @@ namespace CTG.Combat
         /// <summary>Side of the square blast that hits everything around it when the projectile ends. 0 = none.</summary>
         public int ExplosionSizePx;
         public Color Color = Color.white;
+        /// <summary>Set for boomerangs: flight is steered by these stats instead of gravity.</summary>
+        public BoomerangStats Boomerang;
     }
 
     public static class ProjectileDefs
@@ -65,8 +86,18 @@ namespace CTG.Combat
             Color = new Color32(230, 170, 255, 255),
         };
 
+        // 22×22, never used up (it can hit the same target again on the way back), no gravity.
+        static readonly ProjectileDef s_GroveBoomerang = new()
+        {
+            Id = ProjectileId.GroveBoomerang, Name = "Grove Boomerang",
+            WidthPx = 22, HeightPx = 22, LifetimeUpdates = 3600, Penetrate = -1,
+            GravityPerUpdate = 0f, Boomerang = new BoomerangStats(),
+            Color = new Color32(235, 205, 70, 255),
+        };
+
         public static ProjectileDef Get(ProjectileId id) => id switch
         {
+            ProjectileId.GroveBoomerang => s_GroveBoomerang,
             ProjectileId.HellfireArrow => s_Hellfire,
             ProjectileId.ShimmerArrow => s_Shimmer,
             _ => s_None,

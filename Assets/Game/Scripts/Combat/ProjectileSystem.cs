@@ -27,6 +27,14 @@ namespace CTG.Combat
         public int Direction = 1;
         public bool Active = true;
         public readonly HashSet<IDamageable> HitTargets = new();
+        /// <summary>Boomerangs: heading back to the owner.</summary>
+        public bool Returning;
+        /// <summary>Boomerangs: updates flown outbound.</summary>
+        public int OutboundUpdates;
+        /// <summary>Updates since spawn.</summary>
+        public int Age;
+        /// <summary>Boomerangs: the update count at which each target can be hit again.</summary>
+        public readonly Dictionary<IDamageable, int> RehitAt = new();
 
         public Vector2 Size => new(Def.WidthPx, Def.HeightPx);
         public Vector2 Center => Position + Size * 0.5f;
@@ -116,6 +124,11 @@ namespace CTG.Combat
         void Step(Projectile p)
         {
             ProjectileDef def = p.Def;
+            if (def.Boomerang != null)
+            {
+                StepBoomerang(p);
+                return;
+            }
 
             // Flight: straight for a few updates, then constant vertical acceleration up to a cap.
             p.FlightUpdates++;
@@ -145,6 +158,106 @@ namespace CTG.Combat
 
             p.TimeLeft--;
             if (p.TimeLeft <= 0 || p.Penetrate == 0) End(p);
+        }
+
+        /// <summary>
+        /// One boomerang update: outbound flight counts up to the turn, hitting a tile or a target turns it
+        /// around (reversing its velocity); returning it ignores tiles and steers toward the owner.
+        /// </summary>
+        void StepBoomerang(Projectile p)
+        {
+            BoomerangStats b = p.Def.Boomerang;
+            p.Age++;
+
+            if (!p.Returning)
+            {
+                if (++p.OutboundUpdates >= b.OutboundUpdates) p.Returning = true;
+            }
+            else
+            {
+                if (p.Owner == null) { End(p); return; }
+
+                Vector2 toOwner = p.Owner.HitboxPx.center - p.Center;
+                float distance = toOwner.magnitude;
+                if (distance > b.MaxOwnerDistancePx) { End(p); return; }
+
+                Vector2 want = distance > 0f ? toOwner * (b.ReturnMaxSpeed / distance) : Vector2.zero;
+                p.Velocity.x = Accelerate(p.Velocity.x, want.x, b.ReturnAccel);
+                p.Velocity.y = Accelerate(p.Velocity.y, want.y, b.ReturnAccel);
+            }
+
+            if (p.Returning)
+            {
+                p.Position += p.Velocity;
+            }
+            else
+            {
+                float x = p.Position.x, y = p.Position.y;
+                float vx = p.Velocity.x, vy = p.Velocity.y;
+                TileCollision.Result hit = TileCollision.Move(m_World, ref x, ref y, p.Def.WidthPx, p.Def.HeightPx, ref vx, ref vy);
+                p.Position = new Vector2(x, y);
+                if (hit.HitLeft || hit.HitRight || hit.HitFloor || hit.HitCeiling)
+                {
+                    p.Velocity = -p.Velocity;
+                    p.Returning = true;
+                }
+            }
+
+            p.Direction = p.Velocity.x < 0f ? -1 : 1;
+            HitBoomerangTargets(p, b);
+
+            if (p.Returning && p.Owner != null && p.HitboxPx.Overlaps(p.Owner.HitboxPx))
+            {
+                End(p);
+                return;
+            }
+
+            p.TimeLeft--;
+            if (p.TimeLeft <= 0) End(p);
+        }
+
+        /// <summary>Speed toward a target velocity, gaining double while moving the opposite way.</summary>
+        static float Accelerate(float v, float want, float accel)
+        {
+            if (v < want)
+            {
+                v += accel;
+                if (v < 0f && want > 0f) v += accel;
+            }
+            else if (v > want)
+            {
+                v -= accel;
+                if (v > 0f && want < 0f) v -= accel;
+            }
+
+            return v;
+        }
+
+        /// <summary>Hits every hostile target it overlaps (each at most once per cooldown); a hit while outbound turns it back.</summary>
+        void HitBoomerangTargets(Projectile p, BoomerangStats b)
+        {
+            Rect box = p.HitboxPx;
+            IReadOnlyList<IDamageable> targets = DamageableRegistry.All;
+            for (int i = 0; i < targets.Count; i++)
+            {
+                IDamageable target = targets[i];
+                if (!target.CanBeHit) continue;
+                if (p.RehitAt.TryGetValue(target, out int until) && p.Age < until) continue;
+                if (p.Owner != null && !DamageableRegistry.AreHostile(p.Owner, target)) continue;
+                if (!box.Overlaps(target.HitboxPx)) continue;
+
+                if (target.ApplyHit(new HitInfo
+                    {
+                        Damage = p.Damage, Knockback = p.Knockback, Direction = p.Direction, Source = p.Owner, FromProjectile = true,
+                    }) <= 0) continue;
+
+                p.RehitAt[target] = p.Age + b.RehitCooldownUpdates;
+                if (!p.Returning)
+                {
+                    p.Velocity = -p.Velocity;
+                    p.Returning = true;
+                }
+            }
         }
 
         void HitTargets(Projectile p)
@@ -211,8 +324,16 @@ namespace CTG.Combat
 
                 Projectile p = m_Projectiles[i];
                 Vector2 centerPx = Vector2.Lerp(p.PreviousPosition, p.Position, alpha) + p.Size * 0.5f;
-                view.sprite = PlaceholderSprites.Arrow(p.Def.Color);
                 view.transform.position = centerPx / SimUnits.PixelsPerTile;
+                if (p.Def.Boomerang != null)
+                {
+                    // Spins as it flies.
+                    view.sprite = PlaceholderSprites.Solid("boomerang", p.Def.Color, 14, 14);
+                    view.transform.rotation = Quaternion.Euler(0f, 0f, (p.Age + alpha) * 28f);
+                    continue;
+                }
+
+                view.sprite = PlaceholderSprites.Arrow(p.Def.Color);
                 float angle = Mathf.Atan2(p.Velocity.y, p.Velocity.x) * Mathf.Rad2Deg;
                 view.transform.rotation = Quaternion.Euler(0f, 0f, angle);
             }
