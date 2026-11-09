@@ -107,6 +107,8 @@ namespace CTG.UI
         void DrawMana()
         {
             Mana mana = m_Player.Mana;
+            if (mana.Max <= 0) return;
+
             const float width = 260f;
             const float top = k_Margin + 50f;
             var bar = new Rect(Screen.width - width - k_Margin, top + 22f, width, 20f);
@@ -147,8 +149,29 @@ namespace CTG.UI
             }
 
             Mana mana = m_Player.Mana;
-            float manaFill = mana.Max > 0 ? mana.Current / (float)mana.Max : 0f;
-            DrawSmallBar(new Rect(x, y + height + gap, width, height), manaFill, new Color(0.2f, 0.45f, 1f, 1f));
+            bool hasMana = mana.Max > 0;
+            if (hasMana)
+            {
+                DrawSmallBar(new Rect(x, y + height + gap, width, height), mana.Current / (float)mana.Max,
+                             new Color(0.2f, 0.45f, 1f, 1f));
+            }
+
+            // Bow charge, below mana, only while drawing: purple while charging, pulsing gold when full.
+            ChargeBow bow = m_Player.ItemUser.Bow;
+            if (bow.IsCharging && bow.ChargeFraction > 0f)
+            {
+                Color fillColor = new Color32(170, 80, 230, 200);
+                if (bow.ChargeFraction >= 1f)
+                {
+                    float pulse = 0.85f + 0.15f * Mathf.Sin(Time.time * 6f);
+                    fillColor = new Color(1f, 220f / 255f, 80f / 255f, 220f / 255f) * pulse;
+                }
+
+                // Takes the mana bar's slot when the class has no mana.
+                var rect = new Rect(x, y + (height + gap) * (hasMana ? 2f : 1f), width, height);
+                DrawRect(rect, new Color32(60, 40, 90, 160));
+                DrawRect(new Rect(rect.x + 1f, rect.y + 1f, (rect.width - 2f) * bow.ChargeFraction, rect.height - 2f), fillColor);
+            }
         }
 
         void DrawSmallBar(Rect rect, float fill, Color color)
@@ -176,7 +199,7 @@ namespace CTG.UI
                 $"vel {motor.Velocity.x:0.00}, {motor.Velocity.y:0.00} px/tick   grounded {motor.Grounded}\n" +
                 $"tile {Mathf.FloorToInt(motor.Position.x / 16f)}, {Mathf.FloorToInt(motor.Position.y / 16f)}   " +
                 $"cursor {m_Player.CursorTile.x}, {m_Player.CursorTile.y}\n" +
-                "A/D move · Space jump · LMB use · 1-0 / wheel hotbar · K take a hit · L die";
+                "A/D move · Space jump · LMB use · RMB alt use · 1-0 / wheel hotbar · K take a hit · L die";
             GUI.Label(new Rect(k_Margin, Screen.height - 70f, 700f, 66f), text, m_Label);
         }
 

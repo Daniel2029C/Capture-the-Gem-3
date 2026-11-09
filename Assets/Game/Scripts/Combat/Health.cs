@@ -54,6 +54,14 @@ namespace CTG.Combat
             return amount;
         }
 
+        /// <summary>Restores full life and clears immunity (class selection, respawn-like resets).</summary>
+        public void Refill()
+        {
+            Current = Max;
+            ImmunityTicksLeft = 0;
+            m_RegenProgress = 0f;
+        }
+
         public void Kill()
         {
             if (IsDead) return;

@@ -10,6 +10,8 @@ namespace CTG.Input
         public bool Right;
         public bool Jump;
         public bool UseItem;
+        /// <summary>Secondary use (right click), e.g. a bow's second arrow.</summary>
+        public bool UseAlt;
         /// <summary>Hotbar slot chosen by number key this tick (0-9), or -1.</summary>
         public int HotbarKey;
         /// <summary>Net scroll notches since the last tick; positive = scroll up.</summary>
@@ -35,6 +37,7 @@ namespace CTG.Input
 
         bool m_JumpLatched;
         bool m_UseLatched;
+        bool m_AltLatched;
         int m_HotbarKeyLatched = -1;
         bool m_DevHurtLatched;
         bool m_DevKillLatched;
@@ -68,6 +71,7 @@ namespace CTG.Input
             if (mouse != null)
             {
                 if (mouse.leftButton.wasPressedThisFrame) m_UseLatched = true;
+                if (mouse.rightButton.wasPressedThisFrame) m_AltLatched = true;
                 m_ScrollAccumulated += mouse.scroll.ReadValue().y;
             }
         }
@@ -92,6 +96,7 @@ namespace CTG.Input
             if (mouse != null)
             {
                 frame.UseItem = mouse.leftButton.isPressed || m_UseLatched;
+                frame.UseAlt = mouse.rightButton.isPressed || m_AltLatched;
 
                 if (worldCamera != null)
                 {
@@ -109,6 +114,7 @@ namespace CTG.Input
 
             m_JumpLatched = false;
             m_UseLatched = false;
+            m_AltLatched = false;
             m_HotbarKeyLatched = -1;
             m_DevHurtLatched = false;
             m_DevKillLatched = false;

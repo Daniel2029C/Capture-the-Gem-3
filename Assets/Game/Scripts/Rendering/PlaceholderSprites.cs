@@ -169,6 +169,63 @@ namespace CTG.Rendering
             return Finish(key, texture, Vector2.zero);
         }
 
+        /// <summary>An arrow pointing along +x, pivoted at its centre: fletching, shaft and a coloured head.</summary>
+        public static Sprite Arrow(Color headColor)
+        {
+            string key = $"arrow_{ColorUtility.ToHtmlStringRGBA(headColor)}";
+            if (s_Cache.TryGetValue(key, out Sprite cached)) return cached;
+
+            const int width = 16, height = 5;
+            Texture2D texture = NewTexture(width, height);
+            Color shaft = new Color32(150, 110, 70, 255);
+            Color fletch = new Color32(235, 235, 235, 255);
+
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    Color c = Color.clear;
+                    if (y == 2 && x >= 2 && x < 12) c = shaft;
+                    if (x < 3 && (y == 1 || y == 3)) c = fletch;
+                    // Triangular head over the last four columns.
+                    if (x >= 12 && Mathf.Abs(y - 2) <= 15 - x) c = headColor;
+                    texture.SetPixel(x, y, c);
+                }
+            }
+
+            return Finish(key, texture, new Vector2(0.5f, 0.5f));
+        }
+
+        /// <summary>A bow facing +x (limbs curving forward, string behind), pivoted at its grip.</summary>
+        public static Sprite Bow(Color woodColor)
+        {
+            string key = $"bow_{ColorUtility.ToHtmlStringRGB(woodColor)}";
+            if (s_Cache.TryGetValue(key, out Sprite cached)) return cached;
+
+            const int width = 8, height = 22;
+            Texture2D texture = NewTexture(width, height);
+            Color stringColor = new Color32(230, 230, 230, 255);
+
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    texture.SetPixel(x, y, Color.clear);
+                }
+            }
+
+            for (int y = 0; y < height; y++)
+            {
+                float t = y / (height - 1f);
+                int bulge = Mathf.RoundToInt(Mathf.Sin(t * Mathf.PI) * (width - 2));
+                texture.SetPixel(bulge, y, woodColor);
+                texture.SetPixel(Mathf.Min(bulge + 1, width - 1), y, woodColor);
+                texture.SetPixel(0, y, stringColor);
+            }
+
+            return Finish(key, texture, new Vector2(0.5f, 0.5f));
+        }
+
         public static Sprite Square(string key, Color color, int sizePx)
         {
             if (s_Cache.TryGetValue(key, out Sprite cached)) return cached;

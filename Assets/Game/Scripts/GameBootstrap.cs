@@ -1,3 +1,4 @@
+using CTG.Classes;
 using CTG.Combat;
 using CTG.Core;
 using CTG.Gameplay;
@@ -13,7 +14,7 @@ namespace CTG
 {
     /// <summary>
     /// Builds the single-player sandbox at runtime: a flat dirt map, the local player with CTG2's
-    /// pickaxe and 300 dirt, the camera, cursor and HUD. The scene only needs this component and a camera.
+    /// class chosen at start, the camera, cursor and HUD. The scene only needs this component and a camera.
     /// </summary>
     public class GameBootstrap : MonoBehaviour
     {
@@ -23,8 +24,8 @@ namespace CTG
         [Tooltip("Rows of dirt from the bottom of the world.")]
         [SerializeField] int floorDepth = 30;
 
-        [Header("Loadout (CTG2 defaults)")]
-        [SerializeField] ItemId pickaxe = ItemId.ShardstonePickaxe;
+        [Header("Loadout")]
+        [Tooltip("Dirt every class starts with, in slot 2.")]
         [SerializeField] int startingDirt = 300;
 
         [Header("Testing")]
@@ -65,8 +66,11 @@ namespace CTG
             float spawnY = floorDepth * SimUnits.PixelsPerTile;
             Player.Initialize(World, editor, input, new Vector2(spawnX, spawnY));
 
-            Player.Inventory.Set(0, pickaxe, 1);
-            Player.Inventory.Set(1, ItemId.DirtBlock, startingDirt);
+            // Registered after the player so projectiles fired this tick also move this tick.
+            var projectiles = new GameObject("Projectiles").AddComponent<ProjectileSystem>();
+            projectiles.transform.SetParent(transform, false);
+            projectiles.Initialize(World);
+
 
             worldCamera.backgroundColor = new Color32(100, 150, 230, 255);
             worldCamera.clearFlags = CameraClearFlags.SolidColor;
@@ -91,6 +95,18 @@ namespace CTG
             var hud = new GameObject("HUD").AddComponent<HotbarHud>();
             hud.transform.SetParent(transform, false);
             hud.Bind(Player, Dummy);
+
+            // Testing: pick a class before the simulation starts.
+            clock.enabled = false;
+            var select = new GameObject("Class Select").AddComponent<ClassSelectUi>();
+            select.transform.SetParent(transform, false);
+            select.Bind(chosen =>
+            {
+                Player.SetClass(chosen);
+                Player.Inventory.Set(1, ItemId.DirtBlock, startingDirt);
+                input.Consume(); // drop the click that chose the class
+                clock.enabled = true;
+            });
         }
 
         static void GenerateFlatFloor(TileWorld world, int depth)

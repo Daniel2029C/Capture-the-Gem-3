@@ -14,6 +14,7 @@ namespace CTG.Gameplay
     /// immediately while the button stays held. The hotbar can't be changed mid-use.
     /// Damaging items also hit with the swung item for the whole use, each target at most once per use,
     /// and the swing direction is locked toward the cursor when the use starts.
+    /// Charge bows bypass this timing and run their own draw state (<see cref="ChargeBow"/>).
     /// </summary>
     public class ItemUser
     {
@@ -33,7 +34,8 @@ namespace CTG.Gameplay
         /// <summary>Ticks until the next action is allowed.</summary>
         public int ItemTime { get; private set; }
         public ItemId UsingItem { get; private set; }
-        public bool IsUsing => ItemAnimation > 0;
+        public bool IsUsing => ItemAnimation > 0 || Bow.Active;
+        public ChargeBow Bow { get; }
         /// <summary>Facing locked for the current use: +1 right, -1 left.</summary>
         public int UseDirection { get; private set; } = 1;
 
@@ -47,6 +49,7 @@ namespace CTG.Gameplay
             m_Inventory = inventory;
             m_TileEditor = tileEditor;
             m_Owner = owner;
+            Bow = new ChargeBow(owner);
         }
 
         /// <summary>Stops any use in progress (death, stun).</summary>
@@ -55,15 +58,31 @@ namespace CTG.Gameplay
             ItemAnimation = 0;
             ItemTime = 0;
             m_HitThisUse.Clear();
+            Bow.Cancel();
         }
 
-        public void Tick(int tick, bool useHeld, Vector2Int cursorTile, Vector2 cursorPx, PlayerMotor motor)
+        /// <param name="useHeld">Primary use button (left click).</param>
+        /// <param name="altHeld">Secondary use button (right click).</param>
+        public void Tick(int tick, bool useHeld, bool altHeld, Vector2Int cursorTile, Vector2 cursorPx, PlayerMotor motor)
         {
             if (ItemAnimation > 0) ItemAnimation--;
             if (ItemTime > 0) ItemTime--;
 
             ItemStack held = m_Inventory.Selected;
             ItemDef def = held.Def;
+
+            if (!held.IsEmpty && def.UseStyle == UseStyle.ChargeBow)
+            {
+                Bow.Tick(tick, def, useHeld, altHeld, cursorPx, motor);
+                if (Bow.Active)
+                {
+                    UsingItem = held.Id;
+                    UseDirection = Bow.Direction;
+                }
+
+                m_ReleasedUse = !useHeld;
+                return;
+            }
 
             if (ItemAnimation == 0 && useHeld && !held.IsEmpty && def.UseStyle != UseStyle.None)
             {

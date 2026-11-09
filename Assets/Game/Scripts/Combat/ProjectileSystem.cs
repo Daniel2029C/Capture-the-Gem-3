@@ -1,0 +1,248 @@
+using System.Collections.Generic;
+using CTG.Core;
+using CTG.Rendering;
+using CTG.World;
+using UnityEngine;
+
+namespace CTG.Combat
+{
+    /// <summary>A live projectile. Position is the hitbox bottom-left in px (y-up).</summary>
+    public sealed class Projectile
+    {
+        public ProjectileDef Def;
+        public IDamageable Owner;
+        public Vector2 Position;
+        public Vector2 PreviousPosition;
+        /// <summary>px per update.</summary>
+        public Vector2 Velocity;
+        public int Damage;
+        public float Knockback;
+        /// <summary>Updates run per tick beyond the first.</summary>
+        public int ExtraUpdates;
+        public int TimeLeft;
+        public int Penetrate;
+        /// <summary>Counts updates up to the gravity delay.</summary>
+        public int FlightUpdates;
+        /// <summary>Travel direction, +1 right / -1 left; used to push targets.</summary>
+        public int Direction = 1;
+        public bool Active = true;
+        public readonly HashSet<IDamageable> HitTargets = new();
+
+        public Vector2 Size => new(Def.WidthPx, Def.HeightPx);
+        public Vector2 Center => Position + Size * 0.5f;
+        public Rect HitboxPx => new(Position, Size);
+    }
+
+    /// <summary>
+    /// Steps every projectile once per tick (plus its extra updates) after the players have acted, and
+    /// draws them. Each update: flight (gravity) → move with tile collision (touching a tile ends it) →
+    /// hit hostile targets → lifetime. A projectile that ends with an explosion hits everything hostile
+    /// in the blast that it hadn't already hit.
+    /// </summary>
+    public class ProjectileSystem : MonoBehaviour, ITickable
+    {
+        const int k_ExplosionVisualTicks = 10;
+
+        static ProjectileSystem s_Instance;
+        public static ProjectileSystem Instance => s_Instance;
+
+        TileWorld m_World;
+        readonly List<Projectile> m_Projectiles = new();
+        readonly List<SpriteRenderer> m_ProjectileViews = new();
+
+        struct Blast
+        {
+            public Rect RectPx;
+            public int TicksLeft;
+        }
+
+        readonly List<Blast> m_Blasts = new();
+        readonly List<SpriteRenderer> m_BlastViews = new();
+
+        public IReadOnlyList<Projectile> Projectiles => m_Projectiles;
+
+        public void Initialize(TileWorld world)
+        {
+            m_World = world;
+            s_Instance = this;
+            SimulationClock.Instance.Register(this);
+        }
+
+        void OnDestroy()
+        {
+            if (s_Instance == this) s_Instance = null;
+            if (SimulationClock.Instance != null) SimulationClock.Instance.Unregister(this);
+        }
+
+        public Projectile Spawn(ProjectileId id, IDamageable owner, Vector2 centerPx, Vector2 velocity,
+                                int damage, float knockback, int extraUpdates)
+        {
+            ProjectileDef def = ProjectileDefs.Get(id);
+            var projectile = new Projectile
+            {
+                Def = def, Owner = owner, Velocity = velocity, Damage = damage, Knockback = knockback,
+                ExtraUpdates = extraUpdates, TimeLeft = def.LifetimeUpdates, Penetrate = def.Penetrate,
+                Direction = velocity.x < 0f ? -1 : 1,
+            };
+            projectile.Position = centerPx - projectile.Size * 0.5f;
+            projectile.PreviousPosition = projectile.Position;
+            m_Projectiles.Add(projectile);
+            return projectile;
+        }
+
+        public void Tick(int tick)
+        {
+            for (int i = 0; i < m_Projectiles.Count; i++)
+            {
+                Projectile p = m_Projectiles[i];
+                p.PreviousPosition = p.Position;
+                for (int update = 0; update <= p.ExtraUpdates && p.Active; update++)
+                {
+                    Step(p);
+                }
+            }
+
+            m_Projectiles.RemoveAll(p => !p.Active);
+
+            for (int i = m_Blasts.Count - 1; i >= 0; i--)
+            {
+                Blast blast = m_Blasts[i];
+                blast.TicksLeft--;
+                if (blast.TicksLeft <= 0) m_Blasts.RemoveAt(i);
+                else m_Blasts[i] = blast;
+            }
+        }
+
+        void Step(Projectile p)
+        {
+            ProjectileDef def = p.Def;
+
+            // Flight: straight for a few updates, then constant vertical acceleration up to a cap.
+            p.FlightUpdates++;
+            if (p.FlightUpdates >= def.GravityDelayUpdates)
+            {
+                p.FlightUpdates = def.GravityDelayUpdates;
+                p.Velocity.y += def.GravityPerUpdate;
+            }
+
+            if (def.GravityPerUpdate > 0f && p.Velocity.y > def.MaxRiseSpeed) p.Velocity.y = def.MaxRiseSpeed;
+            if (p.Velocity.y < -def.MaxFallSpeed) p.Velocity.y = -def.MaxFallSpeed;
+
+            // Movement: touching a tile ends the projectile where it stopped.
+            float x = p.Position.x, y = p.Position.y;
+            float vx = p.Velocity.x, vy = p.Velocity.y;
+            TileCollision.Result hit = TileCollision.Move(m_World, ref x, ref y, def.WidthPx, def.HeightPx, ref vx, ref vy);
+            p.Position = new Vector2(x, y);
+            if (hit.HitLeft || hit.HitRight || hit.HitFloor || hit.HitCeiling)
+            {
+                End(p);
+                return;
+            }
+
+            p.Direction = p.Velocity.x < 0f ? -1 : 1;
+
+            HitTargets(p);
+
+            p.TimeLeft--;
+            if (p.TimeLeft <= 0 || p.Penetrate == 0) End(p);
+        }
+
+        void HitTargets(Projectile p)
+        {
+            Rect box = p.HitboxPx;
+            IReadOnlyList<IDamageable> targets = DamageableRegistry.All;
+            for (int i = 0; i < targets.Count && p.Penetrate != 0; i++)
+            {
+                IDamageable target = targets[i];
+                if (!target.CanBeHit || p.HitTargets.Contains(target)) continue;
+                if (p.Owner != null && !DamageableRegistry.AreHostile(p.Owner, target)) continue;
+                if (!box.Overlaps(target.HitboxPx)) continue;
+
+                if (target.ApplyHit(new HitInfo
+                    {
+                        Damage = p.Damage, Knockback = p.Knockback, Direction = p.Direction, Source = p.Owner,
+                    }) <= 0) continue;
+
+                p.HitTargets.Add(target);
+                if (p.Def.EndsOnHit && p.TimeLeft > 1) p.TimeLeft = 1;
+                if (p.Penetrate > 0) p.Penetrate--;
+            }
+        }
+
+        void End(Projectile p)
+        {
+            if (!p.Active) return;
+            p.Active = false;
+
+            int size = p.Def.ExplosionSizePx;
+            if (size <= 0) return;
+
+            Vector2 center = p.Center;
+            var blast = new Rect(center.x - size * 0.5f, center.y - size * 0.5f, size, size);
+            m_Blasts.Add(new Blast { RectPx = blast, TicksLeft = k_ExplosionVisualTicks });
+
+            IReadOnlyList<IDamageable> targets = DamageableRegistry.All;
+            for (int i = 0; i < targets.Count; i++)
+            {
+                IDamageable target = targets[i];
+                if (!target.CanBeHit || p.HitTargets.Contains(target)) continue;
+                if (p.Owner != null && !DamageableRegistry.AreHostile(p.Owner, target)) continue;
+                if (!blast.Overlaps(target.HitboxPx)) continue;
+
+                p.HitTargets.Add(target);
+                target.ApplyHit(new HitInfo
+                {
+                    Damage = p.Damage, Knockback = p.Knockback, Direction = p.Direction, Source = p.Owner,
+                });
+            }
+        }
+
+        void LateUpdate()
+        {
+            float alpha = SimulationClock.Instance != null ? SimulationClock.Instance.Alpha : 1f;
+
+            EnsureViews(m_ProjectileViews, m_Projectiles.Count, 12);
+            for (int i = 0; i < m_ProjectileViews.Count; i++)
+            {
+                SpriteRenderer view = m_ProjectileViews[i];
+                bool used = i < m_Projectiles.Count;
+                view.enabled = used;
+                if (!used) continue;
+
+                Projectile p = m_Projectiles[i];
+                Vector2 centerPx = Vector2.Lerp(p.PreviousPosition, p.Position, alpha) + p.Size * 0.5f;
+                view.sprite = PlaceholderSprites.Arrow(p.Def.Color);
+                view.transform.position = centerPx / SimUnits.PixelsPerTile;
+                float angle = Mathf.Atan2(p.Velocity.y, p.Velocity.x) * Mathf.Rad2Deg;
+                view.transform.rotation = Quaternion.Euler(0f, 0f, angle);
+            }
+
+            EnsureViews(m_BlastViews, m_Blasts.Count, 13);
+            for (int i = 0; i < m_BlastViews.Count; i++)
+            {
+                SpriteRenderer view = m_BlastViews[i];
+                bool used = i < m_Blasts.Count;
+                view.enabled = used;
+                if (!used) continue;
+
+                Blast blast = m_Blasts[i];
+                view.sprite = PlaceholderSprites.Square("blast", Color.white, SimUnits.PixelsPerTile);
+                view.color = new Color(1f, 0.55f, 0.15f, 0.6f * blast.TicksLeft / k_ExplosionVisualTicks);
+                view.transform.position = blast.RectPx.position / SimUnits.PixelsPerTile;
+                view.transform.localScale = new Vector3(blast.RectPx.width, blast.RectPx.height, 1f) / SimUnits.PixelsPerTile;
+            }
+        }
+
+        void EnsureViews(List<SpriteRenderer> views, int count, int sortingOrder)
+        {
+            while (views.Count < count)
+            {
+                var go = new GameObject("Projectile View");
+                go.transform.SetParent(transform, false);
+                var view = go.AddComponent<SpriteRenderer>();
+                view.sortingOrder = sortingOrder;
+                views.Add(view);
+            }
+        }
+    }
+}

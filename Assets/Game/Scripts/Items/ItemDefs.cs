@@ -1,3 +1,5 @@
+using System;
+using CTG.Combat;
 using CTG.World;
 using UnityEngine;
 
@@ -13,6 +15,7 @@ namespace CTG.Items
         DirtBlock = 2,
         ShardstonePickaxe = 10000,
         UpgradedShardstonePickaxe = 10001,
+        Rancor = 10002,
     }
 
     public enum UseStyle
@@ -20,6 +23,44 @@ namespace CTG.Items
         None,
         /// <summary>Overhead swing: pickaxes, swords, placing blocks.</summary>
         Swing,
+        /// <summary>Hold to draw and charge, release to loose an arrow (see <see cref="ChargeBowStats"/>).</summary>
+        ChargeBow,
+    }
+
+    /// <summary>
+    /// Tuning for charge bows, ported from CTG2's Rancor. Holding the primary button charges a primary
+    /// arrow, the secondary button a secondary arrow; releasing fires it. Charge runs from 0 to
+    /// <see cref="MaxCharge"/>; an arrow's power is MinPower at no charge rising linearly to 1 at full, and
+    /// scales both its speed and its damage. Arrows are unlimited.
+    /// </summary>
+    [Serializable]
+    public sealed class ChargeBowStats
+    {
+        /// <summary>Minimum ticks between starting two primary draws, and separately two secondary draws.
+        /// Starting a secondary draw also restarts the primary timer if it had already run out.</summary>
+        public int UseDelayTicks = 50;
+        public float MaxCharge = 40f;
+        /// <summary>Power at zero charge (speed and damage multiplier).</summary>
+        public float MinPower = 0.5f;
+        /// <summary>Arrow speed = ShootSpeed × power × (SpeedMultiplier − speed penalty), px/update.</summary>
+        public float SpeedMultiplier = 1.8f;
+        /// <summary>Updates per tick beyond the first for every arrow fired.</summary>
+        public int ArrowExtraUpdates = 1;
+        /// <summary>Arrows spawn this far from the player's centre along the aim, px.</summary>
+        public float SpawnOffsetPx = 2f * 1.41421356f;
+
+        [Header("Primary (left click)")]
+        public ProjectileId PrimaryArrow = ProjectileId.HellfireArrow;
+        public float PrimaryChargePerTick = 0.8f;
+        /// <summary>Subtracted from the bow's damage before the power multiplier.</summary>
+        public int PrimaryDamagePenalty = 4;
+
+        [Header("Secondary (right click)")]
+        public ProjectileId SecondaryArrow = ProjectileId.ShimmerArrow;
+        public float SecondaryChargePerTick = 1f;
+        /// <summary>Released below this charge, the secondary arrow is slower so its rise curves it sharply.</summary>
+        public float SecondaryCurveBelowCharge = 30f;
+        public float SecondaryCurvedSpeedPenalty = 0.5f;
     }
 
     /// <summary>
@@ -54,6 +95,10 @@ namespace CTG.Items
         public float Scale = 1f;
         public bool Consumable;
         public Color IconColor = Color.white;
+        /// <summary>Base projectile speed, px/update.</summary>
+        public float ShootSpeed;
+        /// <summary>Charge bow tuning; set for <see cref="UseStyle.ChargeBow"/> items.</summary>
+        public ChargeBowStats ChargeBow;
 
         public bool IsPickaxe => PickPower > 0;
         public bool PlacesTile => CreateTile != TileId.Air;
@@ -92,8 +137,21 @@ namespace CTG.Items
             IconColor = new Color32(170, 120, 230, 255),
         };
 
+        // CTG2 Rancor (archer bow): damage 37, shoot speed 6.7. useTime 28 is how long the bow stays
+        // drawn after a shot before another draw can start. Knockback is in the per-weapon player
+        // knockback scale (1 = standard); CTG2's item lists 5, but there every player hit used the
+        // standard knockback.
+        static readonly ItemDef s_Rancor = new()
+        {
+            Id = ItemId.Rancor, Name = "Rancor", UseStyle = UseStyle.ChargeBow,
+            UseAnimation = 28, UseTime = 28, Damage = 37, Knockback = 1f, ShootSpeed = 6.7f,
+            ChargeBow = new ChargeBowStats(),
+            IconColor = new Color32(190, 60, 70, 255),
+        };
+
         public static ItemDef Get(ItemId id) => id switch
         {
+            ItemId.Rancor => s_Rancor,
             ItemId.DirtBlock => s_Dirt,
             ItemId.ShardstonePickaxe => s_Shardstone,
             ItemId.UpgradedShardstonePickaxe => s_UpgradedShardstone,

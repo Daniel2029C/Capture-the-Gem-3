@@ -1,3 +1,4 @@
+using CTG.Classes;
 using CTG.Combat;
 using CTG.Core;
 using CTG.Input;
@@ -34,7 +35,7 @@ namespace CTG.Gameplay
         [SerializeField] float respawnSeconds = 3f;
 
         [Header("Mana")]
-        [SerializeField] int maxMana = 20;
+        [Tooltip("Maximum mana comes from the class; 0 means no mana.")]
         [SerializeField] float manaRegenPerSecond = 1f;
 
         [Header("Testing")]
@@ -46,6 +47,9 @@ namespace CTG.Gameplay
         SpriteRenderer m_Body;
         Transform m_HeldItemPivot;
         SpriteRenderer m_HeldItem;
+        Transform m_BowPivot;
+        SpriteRenderer m_BowSprite;
+        SpriteRenderer m_NockedArrow;
 
         public PlayerMotor Motor { get; private set; }
         public Health Health { get; private set; }
@@ -56,6 +60,8 @@ namespace CTG.Gameplay
         public Vector2Int CursorTile { get; private set; }
         public Team Team { get; set; } = Team.Red;
         public int Defense { get; set; }
+        /// <summary>The selected class, or null before one is chosen.</summary>
+        public ClassDef Class { get; private set; }
 
         public Rect HitboxPx => new(Motor.Position.x, Motor.Position.y, Motor.Width, Motor.Height);
         public bool CanBeHit => Health != null && !Health.IsDead && !Health.IsImmune;
@@ -68,7 +74,7 @@ namespace CTG.Gameplay
             Motor.Teleport(spawnPx);
             Health = new Health(maxLife, regenPerSecond, hitImmunityTicks,
                                 SimUnits.SecondsToTicks(respawnSeconds));
-            Mana = new Mana(maxMana, manaRegenPerSecond);
+            Mana = new Mana(0, manaRegenPerSecond);
             Inventory = new Inventory();
             ItemUser = new ItemUser(Inventory, tileEditor, this);
 
@@ -85,10 +91,10 @@ namespace CTG.Gameplay
 
         void OnValidate()
         {
-            if (Motor != null) Motor.Stats = movement;
+            if (Motor != null) Motor.Stats = ClassAdjustedMovement();
             if (Health != null)
             {
-                Health.Max = maxLife;
+                if (Class == null) Health.Max = maxLife;
                 Health.RegenPerSecond = regenPerSecond;
                 Health.HitImmunityTicks = hitImmunityTicks;
                 Health.RespawnTicks = SimUnits.SecondsToTicks(respawnSeconds);
@@ -96,9 +102,38 @@ namespace CTG.Gameplay
 
             if (Mana != null)
             {
-                Mana.Max = maxMana;
                 Mana.RegenPerSecond = manaRegenPerSecond;
             }
+        }
+
+        MovementStats ClassAdjustedMovement()
+        {
+            MovementStats stats = movement;
+            if (Class == null) return stats;
+
+            stats.MaxRunSpeed *= 1f + Class.BonusMoveSpeed;
+            stats.RunAcceleration = (stats.RunAcceleration + Class.BonusRunAcceleration) * (1f + Class.BonusMoveSpeed);
+            return stats;
+        }
+
+        /// <summary>
+        /// Becomes the given class: takes its life, mana, defense and movement bonuses, replaces the
+        /// inventory with its loadout and starts with full life and mana.
+        /// </summary>
+        public void SetClass(ClassDef def)
+        {
+            Class = def;
+            Health.Max = def.MaxLife;
+            Health.Refill();
+            Mana.Max = def.MaxMana;
+            Mana.Refill();
+            Defense = def.BonusDefense;
+            Motor.Stats = ClassAdjustedMovement();
+
+            ItemUser.Cancel();
+            for (int i = 0; i < Inventory.SlotCount; i++) Inventory.Set(i, ItemId.None, 0);
+            foreach (LoadoutEntry entry in def.Loadout) Inventory.Set(entry.Slot, entry.Item, entry.Count);
+            Inventory.Select(0);
         }
 
         void BuildVisuals()
@@ -117,6 +152,21 @@ namespace CTG.Gameplay
             m_HeldItem = item.AddComponent<SpriteRenderer>();
             m_HeldItem.sortingOrder = 11;
             m_HeldItem.enabled = false;
+
+            // Drawn bow: pivots on the body centre and turns to the aim.
+            m_BowPivot = new GameObject("Bow").transform;
+            m_BowPivot.SetParent(transform, false);
+            m_BowPivot.localPosition = new Vector3(0f, HitboxHeightPx * 0.5f / SimUnits.PixelsPerTile, 0f);
+
+            m_BowSprite = new GameObject("Bow Sprite").AddComponent<SpriteRenderer>();
+            m_BowSprite.transform.SetParent(m_BowPivot, false);
+            m_BowSprite.sortingOrder = 12;
+            m_BowSprite.enabled = false;
+
+            m_NockedArrow = new GameObject("Nocked Arrow").AddComponent<SpriteRenderer>();
+            m_NockedArrow.transform.SetParent(m_BowPivot, false);
+            m_NockedArrow.sortingOrder = 13;
+            m_NockedArrow.enabled = false;
         }
 
         public void Tick(int tick)
@@ -139,12 +189,14 @@ namespace CTG.Gameplay
             }
 
             Vector2 cursorPx = input.CursorWorld * SimUnits.PixelsPerTile;
-            ItemUser.Tick(tick, input.UseItem, CursorTile, cursorPx, Motor);
+            ItemUser.Tick(tick, input.UseItem, input.UseAlt, CursorTile, cursorPx, Motor);
 
-            // While swinging, the player faces the way the swing was aimed.
+            // While using an item, the player faces the way it was aimed (a drawn bow follows the cursor).
             if (ItemUser.IsUsing) Motor.Direction = ItemUser.UseDirection;
 
             Motor.Tick(input.Left, input.Right, input.Jump);
+
+            if (ItemUser.Bow.Active) Motor.Direction = ItemUser.UseDirection;
 
             HandleDevInput(input, cursorPx);
             Health.Tick();
@@ -220,6 +272,42 @@ namespace CTG.Gameplay
             m_Body.color = Health.IsImmune && (Time.frameCount / 4) % 2 == 0 ? new Color(1f, 1f, 1f, 0.4f) : Color.white;
 
             UpdateHeldItem(alpha, alive);
+            UpdateBow(alive);
+        }
+
+        void UpdateBow(bool alive)
+        {
+            ChargeBow bow = ItemUser.Bow;
+            bool drawn = alive && bow.Active && bow.Item != null;
+            m_BowSprite.enabled = drawn;
+            m_NockedArrow.enabled = drawn && !bow.Released;
+            if (!drawn) return;
+
+            float angle = bow.AimAngle * Mathf.Rad2Deg;
+            m_BowPivot.localRotation = Quaternion.Euler(0f, 0f, angle);
+            // Facing left, mirror across the aim line so the bow isn't upside down.
+            m_BowPivot.localScale = new Vector3(1f, bow.Direction, 1f);
+
+            // Bow 9·√2 px out along the aim; arrow nocked 16·√2 px out, pulled back up to 13 px by charge.
+            const float px = 1f / SimUnits.PixelsPerTile;
+            m_BowSprite.sprite = PlaceholderSprites.Bow(bow.Item.IconColor);
+            m_BowSprite.transform.localPosition = new Vector3(9f * 1.41421356f * px, 0f, 0f);
+
+            ChargeBowStats stats = bow.Item.ChargeBow;
+            float pullback = Mathf.Lerp(0f, 13f, Mathf.Min(bow.Charge, stats.MaxCharge) / stats.MaxCharge);
+            m_NockedArrow.sprite = PlaceholderSprites.Arrow(ProjectileDefs.Get(bow.Arrow).Color);
+            m_NockedArrow.transform.localPosition = new Vector3((16f * 1.41421356f - pullback) * px, 0f, 0f);
+
+            // At full charge the arrow alternates between slightly brighter and slightly dimmer every 200 ticks.
+            Color tint = Color.white;
+            if (bow.FullyCharged)
+            {
+                tint = bow.FullChargeTicks % 400 <= 200
+                    ? Color.Lerp(tint, Color.white, 0.2f)
+                    : Color.Lerp(tint, new Color32(150, 150, 150, 255), 0.2f);
+            }
+
+            m_NockedArrow.color = tint;
         }
 
         void UpdateHeldItem(float alpha, bool alive)
