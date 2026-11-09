@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using CTG.Core;
+using CTG.World;
 using UnityEngine;
 
 namespace CTG.Rendering
@@ -31,23 +32,35 @@ namespace CTG.Rendering
             return sprite;
         }
 
-        /// <summary>A 16×16 tile with a darker speckle and edge so neighbouring tiles read as a grid.</summary>
-        public static Sprite Tile(string key, Color baseColor)
+        /// <summary>Bit set in a tile's neighbour mask when the neighbour on that side is the same kind of tile.</summary>
+        public const int SameLeft = 1, SameRight = 2, SameBelow = 4, SameAbove = 8;
+        /// <summary>Same, for the four diagonal neighbours (used for the inside corners).</summary>
+        public const int SameBelowLeft = 16, SameBelowRight = 32, SameAboveLeft = 64, SameAboveRight = 128;
+
+        /// <summary>
+        /// A 16×16 tile with a faint speckle. Only sides that border a different kind of tile get a darker
+        /// edge, and inside corners get a dot, so a patch of the same tile reads as one surface instead of a
+        /// grid. <paramref name="sameMask"/> says which neighbours are the same kind; <paramref name="variant"/>
+        /// picks one of a few speckle patterns so the texture doesn't visibly repeat.
+        /// </summary>
+        public static Sprite Tile(string key, Color baseColor, TileShape shape, int sameMask, int variant)
         {
+            key = $"{key}_{shape}_{sameMask}_{variant}";
             if (s_Cache.TryGetValue(key, out Sprite cached)) return cached;
 
             const int size = SimUnits.PixelsPerTile;
             Texture2D texture = NewTexture(size, size);
-            var random = new System.Random(key.GetHashCode());
+            var random = new System.Random(unchecked(variant * 7919 + (int)shape * 104729 + 13));
 
             for (int y = 0; y < size; y++)
             {
                 for (int x = 0; x < size; x++)
                 {
-                    float shade = 0.9f + (float)random.NextDouble() * 0.15f;
-                    if (x == 0 || y == 0) shade *= 0.8f;
+                    bool covered = TileShapes.Covers(shape, x, y);
+                    float shade = 0.94f + (float)random.NextDouble() * 0.1f;
+                    if (covered && IsEdge(shape, sameMask, x, y)) shade *= 0.78f;
                     Color c = baseColor * shade;
-                    c.a = 1f;
+                    c.a = covered ? 1f : 0f;
                     texture.SetPixel(x, y, c);
                 }
             }
@@ -55,10 +68,40 @@ namespace CTG.Rendering
             return Finish(key, texture, Vector2.zero);
         }
 
-        /// <summary>Player body: a coloured rectangle with a head and an eye showing the facing direction.</summary>
-        public static Sprite Player(int widthPx, int heightPx)
+        /// <summary>Is this pixel on a border with empty space or a different tile (drawn darker)?</summary>
+        static bool IsEdge(TileShape shape, int mask, int x, int y)
         {
-            string key = $"player_{widthPx}x{heightPx}";
+            const int last = SimUnits.PixelsPerTile - 1;
+
+            // Borders with neighbouring tiles of a different kind.
+            if (x == 0 && (mask & SameLeft) == 0) return true;
+            if (x == last && (mask & SameRight) == 0) return true;
+            if (y == 0 && (mask & SameBelow) == 0) return true;
+            if (y == last && (mask & SameAbove) == 0) return true;
+
+            // The tile's own cut edges (slopes and half blocks).
+            if (shape != TileShape.Full)
+            {
+                if (x > 0 && !TileShapes.Covers(shape, x - 1, y)) return true;
+                if (x < last && !TileShapes.Covers(shape, x + 1, y)) return true;
+                if (y > 0 && !TileShapes.Covers(shape, x, y - 1)) return true;
+                if (y < last && !TileShapes.Covers(shape, x, y + 1)) return true;
+            }
+
+            // Inside corners: both neighbours on the sides are the same, the diagonal one is not.
+            if (x == 0 && y == 0 && (mask & SameLeft) != 0 && (mask & SameBelow) != 0 && (mask & SameBelowLeft) == 0) return true;
+            if (x == last && y == 0 && (mask & SameRight) != 0 && (mask & SameBelow) != 0 && (mask & SameBelowRight) == 0) return true;
+            if (x == 0 && y == last && (mask & SameLeft) != 0 && (mask & SameAbove) != 0 && (mask & SameAboveLeft) == 0) return true;
+            if (x == last && y == last && (mask & SameRight) != 0 && (mask & SameAbove) != 0 && (mask & SameAboveRight) == 0) return true;
+
+            return false;
+        }
+
+        /// <summary>Player body: a coloured rectangle with a head and an eye showing the facing direction.</summary>
+        /// <param name="teamColor">Colour of the outer outline, which shows which team the player is on.</param>
+        public static Sprite Player(int widthPx, int heightPx, Color teamColor)
+        {
+            string key = $"player_{widthPx}x{heightPx}_{ColorUtility.ToHtmlStringRGB(teamColor)}";
             if (s_Cache.TryGetValue(key, out Sprite cached)) return cached;
 
             Texture2D texture = NewTexture(widthPx, heightPx);
@@ -73,9 +116,10 @@ namespace CTG.Rendering
             {
                 for (int x = 0; x < widthPx; x++)
                 {
-                    bool edge = x == 0 || y == 0 || x == widthPx - 1 || y == heightPx - 1;
+                    bool outer = x == 0 || y == 0 || x == widthPx - 1 || y == heightPx - 1;
+                    bool inner = x == 1 || y == 1 || x == widthPx - 2 || y == heightPx - 2;
                     Color c = y >= heightPx - headHeight ? skin : y < legHeight ? legs : body;
-                    texture.SetPixel(x, y, edge ? outline : c);
+                    texture.SetPixel(x, y, outer ? teamColor : inner ? outline : c);
                 }
             }
 
@@ -226,6 +270,64 @@ namespace CTG.Rendering
             return Finish(key, texture, new Vector2(0.5f, 0.5f));
         }
 
+        /// <summary>A full liquid tile; the surface one has a bright top edge for tiles open to the air.</summary>
+        public static Sprite Liquid(LiquidType liquid, bool surface)
+        {
+            string key = $"liquid_{liquid}_{(surface ? "surface" : "body")}";
+            if (s_Cache.TryGetValue(key, out Sprite cached)) return cached;
+
+            bool nectar = liquid == LiquidType.Nectar;
+            Color body = nectar ? new Color(0.95f, 0.65f, 0.1f) : new Color(0.95f, 0.32f, 0.05f);
+            Color edge = nectar ? new Color(1f, 0.9f, 0.45f) : new Color(1f, 0.78f, 0.2f);
+            float alpha = nectar ? 0.7f : 0.8f;
+
+            const int size = SimUnits.PixelsPerTile;
+            Texture2D texture = NewTexture(size, size);
+            var random = new System.Random((surface ? 11 : 7) + (nectar ? 100 : 0));
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float shade = 0.85f + (float)random.NextDouble() * 0.3f;
+                    Color c = new Color(body.r * shade, body.g * shade, body.b * shade, alpha);
+                    if (surface && y >= size - 3)
+                    {
+                        float k = y == size - 1 ? 1f : 0.7f;
+                        c = new Color(edge.r, edge.g * k, edge.b, 0.95f);
+                    }
+
+                    texture.SetPixel(x, y, c);
+                }
+            }
+
+            return Finish(key, texture, Vector2.zero);
+        }
+
+        /// <summary>A see-through orb tile: faint fill with a brighter ring.</summary>
+        public static Sprite Ward()
+        {
+            const string key = "tile_ward";
+            if (s_Cache.TryGetValue(key, out Sprite cached)) return cached;
+
+            const int size = SimUnits.PixelsPerTile;
+            Texture2D texture = NewTexture(size, size);
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float dx = x - 7.5f, dy = y - 7.5f;
+                    float d = Mathf.Sqrt(dx * dx + dy * dy);
+                    Color c = new Color(0.45f, 0.85f, 1f, 0.22f);
+                    if (d > 6.2f && d <= 7.6f) c = new Color(0.8f, 0.97f, 1f, 0.85f);
+                    else if (d > 7.6f) c = new Color(0.45f, 0.85f, 1f, 0.1f);
+                    if (x >= 3 && x <= 5 && y >= 9 && y <= 11 && d < 6.2f) c = new Color(1f, 1f, 1f, 0.6f);
+                    texture.SetPixel(x, y, c);
+                }
+            }
+
+            return Finish(key, texture, Vector2.zero);
+        }
+
         /// <summary>A 16×16 potion bottle: cork, neck and a round red body with a highlight.</summary>
         public static Sprite Potion()
         {
@@ -287,6 +389,23 @@ namespace CTG.Rendering
             }
 
             return Finish(key, texture, Vector2.zero);
+        }
+
+        /// <summary>A solid rectangle centred on its pivot (hooks and chain links).</summary>
+        public static Sprite Solid(string key, Color color, int widthPx, int heightPx)
+        {
+            if (s_Cache.TryGetValue(key, out Sprite cached)) return cached;
+
+            Texture2D texture = NewTexture(widthPx, heightPx);
+            for (int y = 0; y < heightPx; y++)
+            {
+                for (int x = 0; x < widthPx; x++)
+                {
+                    texture.SetPixel(x, y, color);
+                }
+            }
+
+            return Finish(key, texture, new Vector2(0.5f, 0.5f));
         }
 
         /// <summary>A 16×16 hollow square, for the tile cursor.</summary>

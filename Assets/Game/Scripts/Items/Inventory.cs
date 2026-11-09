@@ -27,6 +27,23 @@ namespace CTG.Items
         public int SelectedSlot { get; private set; }
         public event Action Changed;
 
+        /// <summary>
+        /// Hotbar slots worth showing and selecting: up to the last occupied one (at least 1). Lets the
+        /// UI scale to what a class actually carries instead of always showing all ten.
+        /// </summary>
+        public int VisibleSlots
+        {
+            get
+            {
+                for (int i = HotbarSize - 1; i > 0; i--)
+                {
+                    if (!m_Slots[i].IsEmpty) return i + 1;
+                }
+
+                return 1;
+            }
+        }
+
         public ItemStack this[int slot] => m_Slots[slot];
         public ItemStack Selected => m_Slots[SelectedSlot];
 

@@ -117,7 +117,7 @@ namespace CTG.Gameplay
             else if (def.PlacesTile)
             {
                 Rect hitbox = new Rect(motor.Position.x, motor.Position.y, motor.Width, motor.Height);
-                if (m_TileEditor.Place(cursorTile, def.CreateTile, hitbox))
+                if (m_TileEditor.Place(cursorTile, def.TileFor(m_Owner.Team), hitbox))
                 {
                     if (def.Consumable) m_Inventory.ConsumeFromSlot(m_Inventory.SelectedSlot);
                     ItemTime = def.UseTime;

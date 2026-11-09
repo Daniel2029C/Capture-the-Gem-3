@@ -160,7 +160,7 @@ namespace CTG.Combat
 
                 if (target.ApplyHit(new HitInfo
                     {
-                        Damage = p.Damage, Knockback = p.Knockback, Direction = p.Direction, Source = p.Owner,
+                        Damage = p.Damage, Knockback = p.Knockback, Direction = p.Direction, Source = p.Owner, FromProjectile = true,
                     }) <= 0) continue;
 
                 p.HitTargets.Add(target);
@@ -192,7 +192,7 @@ namespace CTG.Combat
                 p.HitTargets.Add(target);
                 target.ApplyHit(new HitInfo
                 {
-                    Damage = p.Damage, Knockback = p.Knockback, Direction = p.Direction, Source = p.Owner,
+                    Damage = p.Damage, Knockback = p.Knockback, Direction = p.Direction, Source = p.Owner, FromProjectile = true,
                 });
             }
         }

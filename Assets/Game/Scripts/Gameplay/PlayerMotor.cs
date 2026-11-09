@@ -48,8 +48,50 @@ namespace CTG.Gameplay
     public class PlayerMotor
     {
         readonly TileWorld m_World;
+        readonly PlayerCollision m_Collision;
 
         public MovementStats Stats = MovementStats.Default;
+
+        /// <summary>
+        /// The liquid the player is submerged in, set by the player each tick. Lava changes gravity, fall speed
+        /// and jump; nectar only changes gravity and fall speed. In both, the displacement each tick is
+        /// a fraction of the velocity (see <see cref="PlayerCollision"/>).
+        /// </summary>
+        public LiquidType Liquid { get; set; }
+
+        public bool InLiquid => Liquid != LiquidType.None;
+
+        const float k_LavaGravity = 0.2f;
+        const float k_LavaMaxFallSpeed = 5f;
+        const int k_LavaJumpHeight = 30;
+        const float k_LavaJumpSpeed = 6.01f;
+
+        const float k_NectarGravity = 0.1f;
+        const float k_NectarMaxFallSpeed = 3f;
+
+        /// <summary>Stats in use this tick: the base stats, with the liquid overrides while submerged.</summary>
+        MovementStats Active
+        {
+            get
+            {
+                MovementStats s = Stats;
+                switch (Liquid)
+                {
+                    case LiquidType.Nectar:
+                        s.Gravity = k_NectarGravity;
+                        s.MaxFallSpeed = k_NectarMaxFallSpeed;
+                        break;
+                    case LiquidType.Lava:
+                        s.Gravity = k_LavaGravity;
+                        s.MaxFallSpeed = k_LavaMaxFallSpeed;
+                        s.JumpHeight = k_LavaJumpHeight;
+                        s.JumpSpeed = k_LavaJumpSpeed;
+                        break;
+                }
+
+                return s;
+            }
+        }
 
         /// <summary>Hitbox bottom-left corner, px.</summary>
         public Vector2 Position;
@@ -62,8 +104,6 @@ namespace CTG.Gameplay
         public bool Grounded { get; private set; }
         public int Direction { get; set; } = 1;
 
-        /// <summary>Highest ledge walked onto automatically: one tile.</summary>
-        const float k_MaxStepHeight = SimUnits.PixelsPerTile;
         /// <summary>
         /// Slowest the sprite catches up to a step, px/tick; it settles at least as fast as the player runs.
         /// Tuned by feel.
@@ -90,6 +130,7 @@ namespace CTG.Gameplay
         public PlayerMotor(TileWorld world, float widthPx, float heightPx)
         {
             m_World = world;
+            m_Collision = new PlayerCollision(world);
             Width = widthPx;
             Height = heightPx;
         }
@@ -136,12 +177,62 @@ namespace CTG.Gameplay
             HorizontalMovement(left, right);
             JumpMovement(jump);
             ApplyGravity();
-            Collide();
+            Collide(true);
+        }
+
+        /// <summary>
+        /// A tick while hooked: velocity is replaced by the pull (no running, gravity or normal jumping),
+        /// the extra jump refills, and a fresh jump press lets go. The remaining rise of a jump already in
+        /// progress is kept, not cancelled: holding jump, hooking, releasing jump during the pull and pressing it
+        /// again to let go carries that leftover rise into the launch (the "dhook"). Returns true on that press, and the jump
+        /// then starts from the pull: a real jump (half the jump hold) only if the pull is exactly level,
+        /// otherwise just a tiny nudge, so the player leaves with the pull's momentum.
+        /// </summary>
+        public bool TickGrappled(bool jump, Vector2 pullVelocity)
+        {
+            PreviousPosition = Position;
+
+            Velocity = pullVelocity;
+            DoubleJumping = false;
+            DoubleJumpAvailable = DoubleJump != null;
+
+            bool letGo = false;
+            if (jump)
+            {
+                if (m_ReleasedJump)
+                {
+                    if (Velocity.y == 0f)
+                    {
+                        m_JumpTicksLeft = Active.JumpHeight / 2;
+                        Velocity.y = Active.JumpSpeed;
+                    }
+                    else
+                    {
+                        Velocity.y -= 0.01f;
+                    }
+
+                    m_ReleasedJump = false;
+                    letGo = true;
+                }
+            }
+            else
+            {
+                m_ReleasedJump = true;
+            }
+
+            if (Velocity.x > 0f) Direction = 1;
+            else if (Velocity.x < 0f) Direction = -1;
+
+            // Letting go clears the hooks before the collision step, so on that tick the ledge step-up is
+            // allowed again and runs on the pull's velocity: hooking a ledge beside the feet and releasing
+            // hops onto it and carries the pull's forward speed, like walking onto a one-tile step.
+            Collide(letGo);
+            return letGo;
         }
 
         void HorizontalMovement(bool left, bool right)
         {
-            MovementStats s = Stats;
+            MovementStats s = Active;
             if (DoubleJumping && DoubleJump != null)
             {
                 s.RunAcceleration *= DoubleJump.RunAccelerationMultiplier;
@@ -203,22 +294,22 @@ namespace CTG.Gameplay
                     }
                     else
                     {
-                        Velocity.y = Stats.JumpSpeed;
+                        Velocity.y = Active.JumpSpeed;
                         m_JumpTicksLeft--;
                     }
                 }
                 else if (Grounded && m_ReleasedJump)
                 {
-                    m_JumpTicksLeft = Stats.JumpHeight;
-                    Velocity.y = Stats.JumpSpeed;
+                    m_JumpTicksLeft = Active.JumpHeight;
+                    Velocity.y = Active.JumpSpeed;
                 }
                 else if (m_ReleasedJump && DoubleJumpAvailable && DoubleJump != null)
                 {
                     // Needs a fresh press, so holding jump through the first jump never spends it.
                     DoubleJumpAvailable = false;
                     DoubleJumping = true;
-                    m_JumpTicksLeft = (int)(Stats.JumpHeight * DoubleJump.DurationMultiplier);
-                    Velocity.y = Stats.JumpSpeed;
+                    m_JumpTicksLeft = (int)(Active.JumpHeight * DoubleJump.DurationMultiplier);
+                    Velocity.y = Active.JumpSpeed;
                 }
 
                 m_ReleasedJump = false;
@@ -235,56 +326,23 @@ namespace CTG.Gameplay
 
         void ApplyGravity()
         {
-            Velocity.y -= Stats.Gravity;
-            if (Velocity.y < -Stats.MaxFallSpeed) Velocity.y = -Stats.MaxFallSpeed;
+            MovementStats s = Active;
+            Velocity.y -= s.Gravity;
+            if (Velocity.y < -s.MaxFallSpeed) Velocity.y = -s.MaxFallSpeed;
         }
 
-        void Collide()
+        void Collide(bool allowStepUp)
         {
-            float x = Position.x;
-            float y = Position.y;
-            float vx = Velocity.x;
-            float vy = Velocity.y;
-
             PreviousStepOffset = StepOffset;
-            StepOffset = Mathf.MoveTowards(StepOffset, 0f, Mathf.Max(k_MinStepSettleSpeed, Mathf.Abs(vx)));
-            TryStepUp(ref x, ref y, vx, vy);
+            StepOffset = Mathf.MoveTowards(StepOffset, 0f, Mathf.Max(k_MinStepSettleSpeed, Mathf.Abs(Velocity.x)));
 
-            TileCollision.Result hit = TileCollision.Move(m_World, ref x, ref y, Width, Height, ref vx, ref vy);
-
-            Position = new Vector2(x, y);
-            Velocity = new Vector2(vx, vy);
-            Grounded = hit.HitFloor;
-            m_HitCeilingLastTick = hit.HitCeiling;
-        }
-
-        /// <summary>
-        /// Step-up: walking into a ledge at most one tile high lifts the player onto it
-        /// without jumping, provided there is room for the whole hitbox on top. Only while on the ground
-        /// and not rising, so it never shortcuts a jump. The lift is instant in the simulation; the sprite
-        /// eases up over a few ticks through <see cref="StepOffset"/>.
-        /// </summary>
-        void TryStepUp(ref float x, ref float y, float vx, float vy)
-        {
-            if (!Grounded || vx == 0f || vy > 0f) return;
-
-            const float epsilon = 0.001f;
-            float nextX = x + vx;
-
-            // Nothing in the way: plain walking.
-            if (!m_World.AnySolidInPixelRect(nextX, y, Width, Height)) return;
-
-            // The obstacle must be confined to the bottom tile of the hitbox: step onto that tile's top.
-            float stepTop = (SimUnits.PixelToTile(y + epsilon) + 1) * SimUnits.PixelsPerTile;
-            float rise = stepTop - y;
-            if (rise <= 0f || rise > k_MaxStepHeight + epsilon) return;
-
-            // Room for the raised hitbox both where it stands and where it's heading.
-            if (m_World.AnySolidInPixelRect(x, stepTop, Width, Height)) return;
-            if (m_World.AnySolidInPixelRect(nextX, stepTop, Width, Height)) return;
-
-            y = stepTop;
-            StepOffset += rise;
+            PlayerCollision.Result r = m_Collision.Move(Position, Velocity, Width, Height, Active.Gravity, Liquid, allowStepUp);
+            Position = r.Position;
+            Velocity = r.Velocity;
+            Grounded = r.Grounded;
+            m_HitCeilingLastTick = r.HitCeiling;
+            StepOffset += r.StepVisual;
+            if (r.HitCeiling) m_JumpTicksLeft = 0;
         }
     }
 }

@@ -7,7 +7,7 @@ namespace CTG.World
     /// flush against the first solid tile it would enter, and the blocked velocity component is zeroed.
     /// Velocities are well under a tile per tick (falling is capped at 10 px/tick), so a swept test
     /// over the tiles between the old and new edge can't tunnel.
-    /// Slopes and half-blocks are decorative only and never collide differently from full tiles.
+    /// Slopes and half-blocks are treated as full tiles here; players use <see cref="PlayerCollision"/> instead.
     /// </summary>
     public static class TileCollision
     {

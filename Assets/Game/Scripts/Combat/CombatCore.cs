@@ -11,6 +11,16 @@ namespace CTG.Combat
         Blue = 3,
     }
 
+    public static class TeamColors
+    {
+        public static Color For(Team team) => team switch
+        {
+            Team.Red => new Color32(225, 55, 55, 255),
+            Team.Blue => new Color32(60, 110, 255, 255),
+            _ => new Color32(70, 70, 80, 255),
+        };
+    }
+
     /// <summary>One attack landing on a target. Damage is deterministic: no variance, no crits.</summary>
     public struct HitInfo
     {
@@ -20,6 +30,8 @@ namespace CTG.Combat
         /// <summary>+1 pushes the target right, -1 left.</summary>
         public int Direction;
         public IDamageable Source;
+        /// <summary>Dealt by a projectile (arrows, blasts) rather than a melee swing.</summary>
+        public bool FromProjectile;
     }
 
     public interface IDamageable

@@ -19,8 +19,10 @@ namespace CTG.UI
         const float k_PotionSize = 56f;
         const float k_NameHeight = 22f;
 
-        static float HotbarWidth => Inventory.HotbarSize * k_Slot + (Inventory.HotbarSize - 1) * k_Gap;
-        static float HotbarLeft => (Screen.width - HotbarWidth) * 0.5f;
+        // Only the slots the class actually uses are shown; the bar stays centred as it grows or shrinks.
+        int m_Visible = 1;
+        float HotbarWidth => m_Visible * k_Slot + (m_Visible - 1) * k_Gap;
+        float HotbarLeft => (Screen.width - HotbarWidth) * 0.5f;
         static float HotbarTop => Screen.height - k_Margin - k_Slot;
 
         PlayerCharacter m_Player;
@@ -71,7 +73,8 @@ namespace CTG.UI
             EnsureStyles();
             Inventory inventory = m_Player.Inventory;
 
-            for (int i = 0; i < Inventory.HotbarSize; i++)
+            m_Visible = inventory.VisibleSlots;
+            for (int i = 0; i < m_Visible; i++)
             {
                 var rect = new Rect(HotbarLeft + i * (k_Slot + k_Gap), HotbarTop, k_Slot, k_Slot);
                 bool selected = i == inventory.SelectedSlot;
@@ -95,6 +98,7 @@ namespace CTG.UI
 
             DrawLife();
             DrawMana();
+            DrawBuffs();
             DrawOverheadBars();
             DrawPotion();
             DrawDummyStats();
@@ -142,6 +146,27 @@ namespace CTG.UI
             {
                 float seconds = Mathf.Ceil(health.RespawnTicksLeft / (float)Core.SimUnits.TicksPerSecond);
                 GUI.Label(new Rect(0f, Screen.height * 0.35f, Screen.width, 60f), $"You died. Respawning in {seconds:0}", m_Big);
+            }
+        }
+
+        /// <summary>Active debuffs under the bars, with the seconds left.</summary>
+        void DrawBuffs()
+        {
+            Health health = m_Player.Health;
+            float top = k_Margin + 50f + (m_Player.Mana.Max > 0 ? 50f : 0f);
+            const float lineHeight = 24f;
+
+            if (health.IsBurning)
+            {
+                int seconds = Mathf.CeilToInt(health.BurnTicksLeft / (float)Core.SimUnits.TicksPerSecond);
+                GUI.Label(new Rect(Screen.width - 260f - k_Margin, top, 260f, 22f), $"On Fire!  {seconds}s", m_Label);
+                top += lineHeight;
+            }
+
+            if (health.HasRegenBuff)
+            {
+                int seconds = Mathf.CeilToInt(health.RegenBuffTicksLeft / (float)Core.SimUnits.TicksPerSecond);
+                GUI.Label(new Rect(Screen.width - 260f - k_Margin, top, 260f, 22f), $"Regeneration  {seconds}s", m_Label);
             }
         }
 
@@ -240,7 +265,7 @@ namespace CTG.UI
                 $"vel {motor.Velocity.x:0.00}, {motor.Velocity.y:0.00} px/tick   grounded {motor.Grounded}\n" +
                 $"tile {Mathf.FloorToInt(motor.Position.x / 16f)}, {Mathf.FloorToInt(motor.Position.y / 16f)}   " +
                 $"cursor {m_Player.CursorTile.x}, {m_Player.CursorTile.y}\n" +
-                "A/D move · Space jump · LMB use · RMB alt use · 1-0 / wheel hotbar · H potion · K take a hit · L die";
+                "A/D move · Space jump/unhook · LMB use · RMB alt use / hook · 1-0 / wheel hotbar · H potion · K take a hit · L die";
             GUI.Label(new Rect(k_Margin, k_Margin, 700f, 66f), text, m_Label);
         }
 

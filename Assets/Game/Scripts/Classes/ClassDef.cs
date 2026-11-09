@@ -9,6 +9,7 @@ namespace CTG.Classes
     {
         None = 0,
         Archer = 1,
+        Tree = 2,
     }
 
     /// <summary>One starting item: hotbar/inventory slot, item and stack size.</summary>
@@ -29,8 +30,8 @@ namespace CTG.Classes
 
     /// <summary>
     /// A playable class: the stats and starting loadout a player takes on when they pick it. Pure data,
-    /// so a class is added by describing it in <see cref="ClassDefs"/>. Abilities are not part of this
-    /// yet; they'll be attached here once they exist.
+    /// so a class is added by describing it in <see cref="ClassDefs"/>. Abilities a class has built in
+    /// (double jump, hook) are described here too; the rest will be attached the same way.
     /// </summary>
     public sealed class ClassDef
     {
@@ -50,6 +51,9 @@ namespace CTG.Classes
 
         /// <summary>One extra jump in mid-air. Null = none.</summary>
         public DoubleJumpStats DoubleJump;
+
+        /// <summary>Ability 1: grappling hooks fired toward the cursor. Null = none.</summary>
+        public GrappleStats Hook;
 
         /// <summary>Items placed in the inventory on selection, replacing whatever was there.</summary>
         public IReadOnlyList<LoadoutEntry> Loadout = Array.Empty<LoadoutEntry>();
@@ -71,7 +75,20 @@ namespace CTG.Classes
             },
         };
 
-        static readonly ClassDef[] s_All = { s_Archer };
+        // Tree: 150 life, no mana, and only the Upgraded Shardstone Pickaxe (plus the blocks every class
+        // gets). Its ability 1 is the Foliage Tendrils hook.
+        static readonly ClassDef s_Tree = new()
+        {
+            Id = ClassId.Tree, Name = "Tree", Description = "Foliage Tendrils: up to 4 grappling hooks.",
+            MaxLife = 150, MaxMana = 0,
+            Hook = new GrappleStats(),
+            Loadout = new[]
+            {
+                new LoadoutEntry(0, ItemId.UpgradedShardstonePickaxe),
+            },
+        };
+
+        static readonly ClassDef[] s_All = { s_Archer, s_Tree };
 
         /// <summary>Classes offered in the selection screen, in display order.</summary>
         public static IReadOnlyList<ClassDef> All => s_All;

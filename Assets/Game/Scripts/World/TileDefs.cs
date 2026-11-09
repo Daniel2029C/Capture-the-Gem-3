@@ -2,12 +2,18 @@ using UnityEngine;
 
 namespace CTG.World
 {
-    /// <summary>Tile type ids. Values match the tile type ids used in the CTG2 map files.</summary>
+    /// <summary>Tile type ids. Maps refer to tiles by name, so values only need to stay unique.</summary>
     public enum TileId : ushort
     {
         Air = ushort.MaxValue,
-        Dirt = 0,
+        /// <summary>What lies outside the world; also unbreakable.</summary>
         Stone = 1,
+        // CTG's own tiles get ids from 10000 up so they can't collide with a carried-over map id.
+        BlueBrick = 10000,
+        RedBrick = 10001,
+        Ward = 10002,
+        RedDirt = 10003,
+        BlueDirt = 10004,
     }
 
     public readonly struct TileDef
@@ -47,14 +53,33 @@ namespace CTG.World
         public const int HitPoints = 100;
 
         static readonly TileDef s_Air = new(TileId.Air, "Air", false, false, false, 0f, Items.ItemId.None, Color.clear);
-        static readonly TileDef s_Dirt = new(TileId.Dirt, "Dirt", true, true, true, 2f, Items.ItemId.DirtBlock,
-                                             new Color32(151, 107, 75, 255));
+        // Dirt always belongs to a team: maps place it in team colours and players place their own team's.
+        // Both mine the same and drop the same Dirt Block.
+        static readonly TileDef s_RedDirt = new(TileId.RedDirt, "Red Dirt", true, true, true, 2f, Items.ItemId.DirtBlock,
+                                                new Color32(176, 84, 70, 255));
+        static readonly TileDef s_BlueDirt = new(TileId.BlueDirt, "Blue Dirt", true, true, true, 2f, Items.ItemId.DirtBlock,
+                                                 new Color32(80, 100, 172, 255));
         static readonly TileDef s_Stone = new(TileId.Stone, "Stone", true, false, false, 1f, Items.ItemId.None,
                                               new Color32(128, 128, 128, 255));
 
+        // Unbreakable and not placeable by players (no pick damage can ever break them).
+        static readonly TileDef s_BlueBrick = new(TileId.BlueBrick, "Blue Brick", true, false, false, 0f, Items.ItemId.None,
+                                                  new Color32(52, 86, 178, 255));
+        static readonly TileDef s_RedBrick = new(TileId.RedBrick, "Red Brick", true, false, false, 0f, Items.ItemId.None,
+                                                 new Color32(178, 52, 58, 255));
+
+        // Ward Block: players walk and shoot through it, and nobody can place a block on the tile it
+        // occupies. It can be mined and placed like dirt (the placement check refuses any occupied tile).
+        static readonly TileDef s_Ward = new(TileId.Ward, "Ward Block", false, true, true, 2f, Items.ItemId.WardBlock,
+                                             new Color32(120, 220, 255, 255));
+
         public static TileDef Get(TileId id) => id switch
         {
-            TileId.Dirt => s_Dirt,
+            TileId.Ward => s_Ward,
+            TileId.BlueBrick => s_BlueBrick,
+            TileId.RedBrick => s_RedBrick,
+            TileId.RedDirt => s_RedDirt,
+            TileId.BlueDirt => s_BlueDirt,
             TileId.Stone => s_Stone,
             _ => s_Air,
         };

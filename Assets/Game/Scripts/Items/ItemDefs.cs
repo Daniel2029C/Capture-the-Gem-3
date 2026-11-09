@@ -16,6 +16,7 @@ namespace CTG.Items
         ShardstonePickaxe = 10000,
         UpgradedShardstonePickaxe = 10001,
         Rancor = 10002,
+        WardBlock = 10003,
     }
 
     public enum UseStyle
@@ -83,6 +84,8 @@ namespace CTG.Items
         public int PickPower;
         /// <summary>The tile this item places, if any.</summary>
         public TileId CreateTile = TileId.Air;
+        /// <summary>The tile placed by the blue team, for items whose block comes in team colours. Air = same as <see cref="CreateTile"/>.</summary>
+        public TileId CreateTileBlue = TileId.Air;
         /// <summary>Extra tile reach.</summary>
         public int TileBoost;
         /// <summary>Melee damage per hit. 0 = deals no damage.</summary>
@@ -102,6 +105,10 @@ namespace CTG.Items
 
         public bool IsPickaxe => PickPower > 0;
         public bool PlacesTile => CreateTile != TileId.Air;
+
+        /// <summary>The tile this item places for a player on the given team.</summary>
+        public TileId TileFor(Combat.Team team) =>
+            team == Combat.Team.Blue && CreateTileBlue != TileId.Air ? CreateTileBlue : CreateTile;
         public bool DealsDamage => Damage > 0;
         public float SwingLengthPx => SizePx * Scale;
     }
@@ -114,7 +121,7 @@ namespace CTG.Items
         static readonly ItemDef s_Dirt = new()
         {
             Id = ItemId.DirtBlock, Name = "Dirt Block", MaxStack = 9999, UseStyle = UseStyle.Swing,
-            UseAnimation = 15, UseTime = 10, AutoReuse = true, CreateTile = TileId.Dirt, Consumable = true,
+            UseAnimation = 15, UseTime = 10, AutoReuse = true, CreateTile = TileId.RedDirt, CreateTileBlue = TileId.BlueDirt, Consumable = true,
             IconColor = new Color32(151, 107, 75, 255),
         };
 
@@ -149,8 +156,17 @@ namespace CTG.Items
             IconColor = new Color32(190, 60, 70, 255),
         };
 
+        // Ward Block: placed like dirt; blocks building on its tile while staying walk-through.
+        static readonly ItemDef s_Ward = new()
+        {
+            Id = ItemId.WardBlock, Name = "Ward Block", MaxStack = 9999, UseStyle = UseStyle.Swing,
+            UseAnimation = 15, UseTime = 10, AutoReuse = true, CreateTile = TileId.Ward, Consumable = true,
+            IconColor = new Color32(120, 220, 255, 255),
+        };
+
         public static ItemDef Get(ItemId id) => id switch
         {
+            ItemId.WardBlock => s_Ward,
             ItemId.Rancor => s_Rancor,
             ItemId.DirtBlock => s_Dirt,
             ItemId.ShardstonePickaxe => s_Shardstone,

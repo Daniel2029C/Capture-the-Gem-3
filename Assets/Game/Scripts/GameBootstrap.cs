@@ -13,20 +13,20 @@ using PlayerInput = CTG.Input.PlayerInput;
 namespace CTG
 {
     /// <summary>
-    /// Builds the single-player sandbox at runtime: a flat dirt map, the local player with CTG2's
-    /// class chosen at start, the camera, cursor and HUD. The scene only needs this component and a camera.
+    /// Builds the single-player sandbox at runtime: the chosen map, the local player with the class
+    /// chosen at start, the camera, cursor and HUD. The scene only needs this component and a camera.
     /// </summary>
     public class GameBootstrap : MonoBehaviour
     {
         [Header("Map")]
-        [SerializeField] int worldWidth = 300;
-        [SerializeField] int worldHeight = 120;
-        [Tooltip("Rows of dirt from the bottom of the world.")]
-        [SerializeField] int floorDepth = 30;
+        [Tooltip("Name of a map file in Assets/Resources/Maps: Stalactite or Test.")]
+        [SerializeField] string mapName = "stalactite";
 
         [Header("Loadout")]
         [Tooltip("Dirt every class starts with, in slot 2.")]
         [SerializeField] int startingDirt = 300;
+        [Tooltip("Testing: Ward Blocks every class starts with, in slot 4. 0 = none.")]
+        [SerializeField] int startingWardBlocks;
 
         [Header("Testing")]
         [Tooltip("Tiles right of the player spawn where the target dummy stands.")]
@@ -35,6 +35,7 @@ namespace CTG
         [SerializeField] Camera worldCamera;
 
         public TileWorld World { get; private set; }
+        public LoadedMap Map { get; private set; }
         public PlayerCharacter Player { get; private set; }
         public TargetDummy Dummy { get; private set; }
 
@@ -45,8 +46,8 @@ namespace CTG
             var clock = new GameObject("Simulation Clock").AddComponent<SimulationClock>();
             clock.transform.SetParent(transform, false);
 
-            World = new TileWorld(worldWidth, worldHeight);
-            GenerateFlatFloor(World, floorDepth);
+            Map = MapLoader.Load(mapName);
+            World = Map.World;
 
             var editor = new TileEditor(World);
             clock.Register(new TileEditorTicker(editor));
@@ -62,9 +63,12 @@ namespace CTG
 
             var playerGo = new GameObject("Player");
             Player = playerGo.AddComponent<PlayerCharacter>();
-            float spawnX = worldWidth * 0.5f * SimUnits.PixelsPerTile - PlayerCharacter.HitboxWidthPx * 0.5f;
-            float spawnY = floorDepth * SimUnits.PixelsPerTile;
-            Player.Initialize(World, editor, input, new Vector2(spawnX, spawnY));
+            // Spawn in the middle of the map, on the first surface found from the top.
+            int standRow = MapLoader.FindStandRow(Map, Map.CenterX, out int spawnColumn);
+            if (standRow < 0) throw new System.InvalidOperationException($"Map '{Map.Name}' has nowhere to spawn.");
+
+            Vector2 spawn = StandPosition(spawnColumn, standRow, PlayerCharacter.HitboxWidthPx);
+            Player.Initialize(World, editor, input, spawn);
 
             // Registered after the player so projectiles fired this tick also move this tick.
             var projectiles = new GameObject("Projectiles").AddComponent<ProjectileSystem>();
@@ -76,7 +80,7 @@ namespace CTG
             worldCamera.clearFlags = CameraClearFlags.SolidColor;
             CameraView cameraView = worldCamera.GetComponent<CameraView>();
             if (cameraView == null) cameraView = worldCamera.gameObject.AddComponent<CameraView>();
-            cameraView.Bind(Player, new Vector2(worldWidth, worldHeight));
+            cameraView.Bind(Player, new Vector2(World.Width, World.Height));
 
             var cursor = new GameObject("Tile Cursor View").AddComponent<TileCursorView>();
             cursor.transform.SetParent(transform, false);
@@ -85,12 +89,12 @@ namespace CTG
             var combatText = new GameObject("Combat Text").AddComponent<CombatText>();
             combatText.transform.SetParent(transform, false);
 
-            // Testing target a few tiles right of spawn, standing on the floor.
+            // Testing target a few tiles right of spawn, standing on the nearest surface there.
             var dummyGo = new GameObject("Target Dummy");
             dummyGo.transform.SetParent(transform, false);
             Dummy = dummyGo.AddComponent<TargetDummy>();
-            float dummyX = (worldWidth * 0.5f + dummyOffsetTiles) * SimUnits.PixelsPerTile;
-            Dummy.Initialize(new Vector2(dummyX, floorDepth * SimUnits.PixelsPerTile));
+            int dummyRow = MapLoader.FindStandRow(Map, spawnColumn + dummyOffsetTiles, out int dummyColumn);
+            Dummy.Initialize(dummyRow >= 0 ? StandPosition(dummyColumn, dummyRow, 22) : spawn + new Vector2(dummyOffsetTiles * SimUnits.PixelsPerTile, 0f));
 
             var hud = new GameObject("HUD").AddComponent<HotbarHud>();
             hud.transform.SetParent(transform, false);
@@ -104,21 +108,16 @@ namespace CTG
             {
                 Player.SetClass(chosen);
                 Player.Inventory.Set(1, ItemId.DirtBlock, startingDirt);
+                if (startingWardBlocks > 0) Player.Inventory.Set(3, ItemId.WardBlock, startingWardBlocks);
                 input.Consume(); // drop the click that chose the class
                 clock.enabled = true;
             });
         }
 
-        static void GenerateFlatFloor(TileWorld world, int depth)
-        {
-            for (int y = 0; y < depth && y < world.Height; y++)
-            {
-                for (int x = 0; x < world.Width; x++)
-                {
-                    world.SetRaw(x, y, TileId.Dirt);
-                }
-            }
-        }
+        /// <summary>Hitbox bottom-left, centred on a tile column and standing on top of the given tile row.</summary>
+        static Vector2 StandPosition(int column, int standRow, float hitboxWidthPx) => new(
+            (column + 0.5f) * SimUnits.PixelsPerTile - hitboxWidthPx * 0.5f,
+            (standRow + 1) * SimUnits.PixelsPerTile);
 
         void CreateWorldRenderer()
         {

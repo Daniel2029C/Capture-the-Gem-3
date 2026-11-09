@@ -80,7 +80,8 @@ namespace CTG.World
 
         /// <summary>
         /// A block needs a neighbouring tile (or wall) to place against: blocks can't float in mid-air.
-        /// CTG2 additionally forbids replacing an existing tile. The tile also can't overlap a player.
+        /// CTG2 additionally forbids replacing an existing tile (which is also what makes a Ward Block
+        /// protect its tile). A solid tile also can't overlap a player; non-solid ones can.
         /// </summary>
         public bool CanPlace(Vector2Int tile, TileId type, Rect blockerPixels)
         {
@@ -90,7 +91,7 @@ namespace CTG.World
 
             var tileRect = new Rect(tile.x * SimUnits.PixelsPerTile, tile.y * SimUnits.PixelsPerTile,
                                     SimUnits.PixelsPerTile, SimUnits.PixelsPerTile);
-            if (tileRect.Overlaps(blockerPixels)) return false;
+            if (TileDefs.Get(type).Solid && tileRect.Overlaps(blockerPixels)) return false;
 
             return HasSolidNeighbour(tile);
         }
@@ -103,7 +104,7 @@ namespace CTG.World
             return true;
         }
 
-        bool HasSolidNeighbour(Vector2Int tile)
+        public bool HasSolidNeighbour(Vector2Int tile)
         {
             bool Solid(int x, int y) => m_World.InBounds(x, y) && TileDefs.Get(m_World.Get(x, y)).Solid;
 
