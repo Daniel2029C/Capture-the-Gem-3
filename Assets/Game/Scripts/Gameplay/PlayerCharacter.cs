@@ -476,7 +476,7 @@ namespace CTG.Gameplay
                 CreditKill(attacker);
                 Die();
             }
-            else if (hit.Knockback > 0f)
+            else if (!hit.Knockback.IsZero)
             {
                 Motor.ApplyKnockback(CombatRules.KnockbackVelocity(hit.Knockback, hit.Direction));
             }

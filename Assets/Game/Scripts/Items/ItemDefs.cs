@@ -95,7 +95,7 @@ namespace CTG.Items
         /// <summary>Melee damage per hit. 0 = deals no damage.</summary>
         public int Damage;
         /// <summary>Knockback applied to players hit. 1 = standard knockback.</summary>
-        public float Knockback;
+        public Combat.KnockbackScale Knockback;
         /// <summary>Length of the item's sprite in pixels before scaling; sets the swing's reach.</summary>
         public int SizePx = 16;
         /// <summary>Size multiplier for the swung item (and so its melee reach).</summary>

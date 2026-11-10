@@ -111,7 +111,7 @@ namespace CTG.Mobs
             damage = Mathf.Min(damage, Health);
             Health -= damage;
             m_HitFlashTicks = 6;
-            if (hit.Knockback > 0f)
+            if (!hit.Knockback.IsZero)
             {
                 // Shoved the way the hit was travelling, then it recovers; the push also rattles its aim for a moment.
                 m_Knock = CombatRules.KnockbackVelocity(hit.Knockback, hit.Direction == 0 ? 1 : hit.Direction) * k_KnockbackScale;

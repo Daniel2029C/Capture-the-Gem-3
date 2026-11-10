@@ -16,7 +16,7 @@ namespace CTG.Combat
         /// <summary>px per update.</summary>
         public Vector2 Velocity;
         public int Damage;
-        public float Knockback;
+        public KnockbackScale Knockback;
         /// <summary>Where it was fired from (centre, px) and how fast: a follow-up shot starts there.</summary>
         public Vector2 OriginCenter;
         public Vector2 LaunchVelocity;
@@ -89,7 +89,7 @@ namespace CTG.Combat
         }
 
         public Projectile Spawn(ProjectileId id, IDamageable owner, Vector2 centerPx, Vector2 velocity,
-                                int damage, float knockback, int extraUpdates)
+                                int damage, KnockbackScale knockback, int extraUpdates)
         {
             ProjectileDef def = ProjectileDefs.Get(id);
             var projectile = new Projectile

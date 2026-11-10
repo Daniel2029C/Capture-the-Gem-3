@@ -25,12 +25,35 @@ namespace CTG.Combat
         };
     }
 
+    /// <summary>
+    /// How hard a hit pushes, as multipliers on the standard launch (<see cref="CombatRules.BaseKnockbackVelocity"/>):
+    /// X scales the horizontal push (away from the attacker) and Y the upward launch independently. (1, 1) is a
+    /// standard hit, (0, 0) pushes nothing, (1, 0) is a flat shove, (0.5, 2) pops the target up. A plain number
+    /// converts to the same value on both axes, so a weapon can still just say <c>Knockback = 0.7f</c>.
+    /// </summary>
+    [System.Serializable]
+    public struct KnockbackScale
+    {
+        public float X;
+        public float Y;
+
+        public KnockbackScale(float x, float y)
+        {
+            X = x;
+            Y = y;
+        }
+
+        public bool IsZero => X == 0f && Y == 0f;
+
+        public static implicit operator KnockbackScale(float uniform) => new(uniform, uniform);
+    }
+
     /// <summary>One attack landing on a target. Damage is deterministic: no variance, no crits.</summary>
     public struct HitInfo
     {
         public int Damage;
-        /// <summary>Weapon knockback stat. 1 = the standard player knockback; 0 = none.</summary>
-        public float Knockback;
+        /// <summary>Weapon knockback stat per axis. (1, 1) = the standard player knockback; (0, 0) = none.</summary>
+        public KnockbackScale Knockback;
         /// <summary>+1 pushes the target right, -1 left.</summary>
         public int Direction;
         public IDamageable Source;
@@ -65,7 +88,6 @@ namespace CTG.Combat
         public static bool AreHostile(IDamageable a, IDamageable b)
         {
             if (a == b) return false;
-            if (a.Team == Team.Monster && b.Team == Team.Monster) return false;
             if (a.Team == Team.Neutral || b.Team == Team.Neutral) return true;
             return a.Team != b.Team;
         }
@@ -74,8 +96,8 @@ namespace CTG.Combat
     public static class CombatRules
     {
         /// <summary>
-        /// Launch velocity (px/tick, y-up) of a knockback-1 hit. A weapon's knockback stat scales both
-        /// components: 0.5 knockback launches half as far, 2 twice as far.
+        /// Launch velocity (px/tick, y-up) of a standard (1, 1) knockback hit. A weapon's knockback stat scales the
+        /// horizontal and vertical components separately: (0.5, 0.5) launches half as far, (1, 2) twice as high.
         /// </summary>
         public static readonly Vector2 BaseKnockbackVelocity = new(4.5f, 3.5f);
 
@@ -99,7 +121,8 @@ namespace CTG.Combat
             return damage;
         }
 
-        public static Vector2 KnockbackVelocity(float knockback, int direction) =>
-            new(BaseKnockbackVelocity.x * knockback * direction, BaseKnockbackVelocity.y * knockback);
+        /// <param name="direction">+1 pushes right, -1 left; it flips only the horizontal part.</param>
+        public static Vector2 KnockbackVelocity(KnockbackScale knockback, int direction) =>
+            new(BaseKnockbackVelocity.x * knockback.X * direction, BaseKnockbackVelocity.y * knockback.Y);
     }
 }
