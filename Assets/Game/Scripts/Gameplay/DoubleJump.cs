@@ -8,7 +8,7 @@ namespace CTG.Gameplay
     /// rising, running is faster.
     /// </summary>
     [Serializable]
-    public sealed class DoubleJumpStats
+    public sealed class DoubleJumpMobility : Mobility
     {
         /// <summary>Rise duration as a multiple of a normal jump's (15 ticks → 18 at 1.25).</summary>
         public float DurationMultiplier = 1.25f;
@@ -16,5 +16,12 @@ namespace CTG.Gameplay
         public float RunAccelerationMultiplier = 1.5f;
         /// <summary>Top run speed multiplier while the extra jump is rising.</summary>
         public float MaxRunSpeedMultiplier = 1.25f;
+
+        public override void Apply(PlayerCharacter player) => player.Motor.DoubleJump = this;
+
+        public override void Remove(PlayerCharacter player)
+        {
+            if (player.Motor.DoubleJump == this) player.Motor.DoubleJump = null;
+        }
     }
 }

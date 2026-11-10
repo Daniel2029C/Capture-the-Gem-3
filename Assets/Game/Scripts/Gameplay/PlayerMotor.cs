@@ -67,13 +67,8 @@ namespace CTG.Gameplay
         /// <summary>Down is held this tick, so glass platforms can be fallen through. Set by the player before each tick.</summary>
         public bool DropThrough { get; set; }
 
-        /// <summary>
-        /// Holding down while falling in the air speeds the fall up (set by the class). Gravity is multiplied; the
-        /// fall speed cap is unchanged. It does nothing on the ground, in liquid, or while rising.
-        /// </summary>
-        public bool FastFall { get; set; }
-
-        const float k_FastFallGravityMultiplier = 2f;
+        /// <summary>Fast fall, if the class has it (null = none): see <see cref="FastFallMobility"/>.</summary>
+        public FastFallMobility FastFall { get; set; }
 
         public bool InLiquid => Liquid != LiquidType.None;
 
@@ -133,7 +128,7 @@ namespace CTG.Gameplay
         public float PreviousStepOffset { get; private set; }
 
         /// <summary>The double jump this player has, or null for none. Set by the class.</summary>
-        public DoubleJumpStats DoubleJump { get; set; }
+        public DoubleJumpMobility DoubleJump { get; set; }
         /// <summary>The extra jump is ready to use (refilled whenever grounded).</summary>
         public bool DoubleJumpAvailable { get; private set; }
         /// <summary>The extra jump is currently rising.</summary>
@@ -351,9 +346,9 @@ namespace CTG.Gameplay
         {
             MovementStats s = Active;
             float gravity = s.Gravity;
-            if (FastFall && DropThrough && !Grounded && Liquid == LiquidType.None && Velocity.y <= 0f)
+            if (FastFall != null && DropThrough && !Grounded && Liquid == LiquidType.None && Velocity.y <= 0f)
             {
-                gravity *= k_FastFallGravityMultiplier;
+                gravity *= FastFall.GravityMultiplier;
             }
 
             Velocity.y -= gravity;

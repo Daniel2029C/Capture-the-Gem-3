@@ -126,6 +126,13 @@ namespace CTG.Gameplay
         public int EnduranceTicksLeft { get; private set; }
         /// <summary>The class's grappling hooks (ability 1), or null if it has none.</summary>
         public GrapplingHooks Hooks { get; private set; }
+
+        /// <summary>Gives the player grappling hooks with this tuning, or takes them away (null). Used by <see cref="GrappleMobility"/>.</summary>
+        public void SetGrapple(GrappleMobility stats)
+        {
+            Hooks?.ReleaseAll();
+            Hooks = stats != null ? new GrapplingHooks(stats, m_World) : null;
+        }
         /// <summary>Abilities 1-3 (default keys Shift, E, C).</summary>
         public AbilitySet Abilities { get; } = new();
         /// <summary>The Archer's shared ability state, or null for other classes.</summary>
@@ -197,8 +204,8 @@ namespace CTG.Gameplay
             MovementStats stats = movement;
             if (Class == null) return stats;
 
-            stats.MaxRunSpeed *= 1f + Class.BonusMoveSpeed;
-            stats.RunAcceleration = (stats.RunAcceleration + Class.BonusRunAcceleration) * (1f + Class.BonusMoveSpeed);
+            stats.MaxRunSpeed *= 1f + Class.Stats.MoveSpeedBonus;
+            stats.RunAcceleration = (stats.RunAcceleration + Class.Stats.RunAccelerationBonus) * (1f + Class.Stats.MoveSpeedBonus);
             return stats;
         }
 
@@ -208,17 +215,16 @@ namespace CTG.Gameplay
         /// </summary>
         public void SetClass(ClassDef def)
         {
+            ClassDef previous = Class;
             Class = def;
-            Health.Max = def.MaxLife;
+            Health.Max = def.Stats.MaxLife;
             Health.Refill();
-            Mana.Max = def.MaxMana;
+            Mana.Max = def.Stats.MaxMana;
             Mana.Refill();
-            Defense = def.BonusDefense;
+            Defense = def.Stats.Defense;
             Motor.Stats = ClassAdjustedMovement();
-            Motor.DoubleJump = def.DoubleJump;
-            Motor.FastFall = def.FastFall;
-            Hooks?.ReleaseAll();
-            Hooks = def.Hook != null ? new GrapplingHooks(def.Hook, m_World) : null;
+            if (previous != null) foreach (Mobility feature in previous.Mobilities) feature.Remove(this);
+            foreach (Mobility feature in def.Mobilities) feature.Apply(this);
             Progress.Reset();
             Purchases.Reset();
             Offerings = 0;
@@ -229,7 +235,7 @@ namespace CTG.Gameplay
             bool archerKit = System.Array.Exists(def.Abilities, id => id >= AbilityId.ArcherSprint && id <= AbilityId.ArcherLuminite);
             Archer = archerKit ? new ArcherKit() : null;
             ItemUser.Bow.Kit = Archer;
-            ItemUser.MiningSpeedMultiplier = def.MiningSpeedMultiplier;
+            ItemUser.MiningSpeedMultiplier = def.Stats.MiningSpeedMultiplier;
             for (int i = 0; i < AbilitySet.SlotCount; i++)
             {
                 Abilities.Set(i, i < def.Abilities.Length ? AbilityFactory.Create(def.Abilities[i], Archer) : null);
@@ -396,10 +402,10 @@ namespace CTG.Gameplay
         {
             Modifiers = PlayerModifiers.Compute(Purchases, Progress, EnduranceTicksLeft > 0, ApexBuffTicksLeft > 0);
             ItemUser.WeaponDamageMultiplier = Modifiers.WeaponDamageMultiplier;
-            ItemUser.MiningSpeedMultiplier = (Class != null ? Class.MiningSpeedMultiplier : 1f) * Modifiers.MiningSpeedMultiplier;
+            ItemUser.MiningSpeedMultiplier = (Class != null ? Class.Stats.MiningSpeedMultiplier : 1f) * Modifiers.MiningSpeedMultiplier;
 
             // Life scales with level; gaining max life also gives that much life now.
-            int baseLife = Class != null ? Class.MaxLife : maxLife;
+            int baseLife = Class != null ? Class.Stats.MaxLife : maxLife;
             int scaledLife = Mathf.RoundToInt(baseLife * Modifiers.LifeMultiplier);
             if (scaledLife != Health.Max)
             {
@@ -452,8 +458,8 @@ namespace CTG.Gameplay
         {
             if (!CanBeHit) return 0;
 
-            int damage = CombatRules.ComputeDamage(hit.Damage, Defense);
-            if (Modifiers.DamageReduction > 0f) damage = Mathf.Max(1, Mathf.RoundToInt(damage * (1f - Modifiers.DamageReduction)));
+            float reduction = (Class != null ? Class.Stats.DamageReduction : 0f) + Modifiers.DamageReduction;
+            int damage = CombatRules.ComputeDamage(hit.Damage, Defense, reduction);
             int dealt = Health.TakeDamage(damage);
             if (dealt <= 0) return 0;
 

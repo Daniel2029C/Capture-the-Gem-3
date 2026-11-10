@@ -11,7 +11,7 @@ namespace CTG.Gameplay
     /// <see cref="RangePx"/>. All latched hooks pull the player toward their average position.
     /// </summary>
     [System.Serializable]
-    public sealed class GrappleStats
+    public sealed class GrappleMobility : Mobility
     {
         /// <summary>Distance from the player beyond which a flying hook turns back, px.</summary>
         public float RangePx = 352f;
@@ -31,6 +31,13 @@ namespace CTG.Gameplay
         public float CatchDistancePx = 24f;
         /// <summary>A hook this far from the player is dropped, px.</summary>
         public float DropDistancePx = 2500f;
+
+        public override void Apply(PlayerCharacter player) => player.SetGrapple(this);
+
+        public override void Remove(PlayerCharacter player)
+        {
+            if (player.Hooks != null && player.Hooks.Stats == this) player.SetGrapple(null);
+        }
     }
 
     public enum HookState
@@ -60,17 +67,17 @@ namespace CTG.Gameplay
     /// </summary>
     public sealed class GrapplingHooks
     {
-        readonly GrappleStats m_Stats;
+        readonly GrappleMobility m_Stats;
         readonly TileWorld m_World;
         readonly List<GrappleHook> m_Hooks = new();
 
-        public GrapplingHooks(GrappleStats stats, TileWorld world)
+        public GrapplingHooks(GrappleMobility stats, TileWorld world)
         {
             m_Stats = stats;
             m_World = world;
         }
 
-        public GrappleStats Stats => m_Stats;
+        public GrappleMobility Stats => m_Stats;
         public IReadOnlyList<GrappleHook> Hooks => m_Hooks;
         public int Count => m_Hooks.Count;
 
@@ -105,7 +112,7 @@ namespace CTG.Gameplay
 
         /// <summary>
         /// The velocity the latched hooks pull the player at: toward the average of their positions, at most
-        /// <see cref="GrappleStats.PullSpeed"/>, slower only when the point is closer than that. Null if none
+        /// <see cref="GrappleMobility.PullSpeed"/>, slower only when the point is closer than that. Null if none
         /// is latched.
         /// </summary>
         public Vector2? PullVelocity(Vector2 playerCenterPx)

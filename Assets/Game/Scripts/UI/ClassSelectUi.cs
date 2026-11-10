@@ -50,7 +50,7 @@ namespace CTG.UI
             {
                 ClassDef def = classes[i];
                 var rect = new Rect(x + i * (cardWidth + gap), y, cardWidth, cardHeight);
-                string mana = def.MaxMana > 0 ? $"   Mana {def.MaxMana}" : "";
+                string mana = def.Stats.MaxMana > 0 ? $"   Mana {def.Stats.MaxMana}" : "";
                 if (GUI.Button(new Rect(rect.x, rect.y, rect.width, 50f), def.Name, m_Button))
                 {
                     Action<ClassDef> callback = m_OnSelected;
@@ -60,7 +60,7 @@ namespace CTG.UI
                 }
 
                 GUI.Label(new Rect(rect.x, rect.y + 56f, rect.width, 54f),
-                          $"Life {def.MaxLife}{mana}\n{def.Description}", m_Small);
+                          $"Life {def.Stats.MaxLife}{mana}\n{def.Description}", m_Small);
             }
         }
     }

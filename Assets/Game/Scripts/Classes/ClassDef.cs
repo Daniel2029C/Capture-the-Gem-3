@@ -29,9 +29,54 @@ namespace CTG.Classes
     }
 
     /// <summary>
+    /// A class's tunable numbers, grouped so they can be compared and changed in one place. Immutable; build one with
+    /// named arguments (anything left out takes its neutral default), e.g. <c>new ClassStats(maxLife: 140)</c>.
+    /// </summary>
+    public readonly struct ClassStats
+    {
+        /// <summary>Maximum life.</summary>
+        public readonly int MaxLife;
+        /// <summary>0 = the class has no mana (and no mana bar).</summary>
+        public readonly int MaxMana;
+        /// <summary>
+        /// Flat defense: each point removes one point of damage from every hit (1:1), applied first. A hit that would be
+        /// reduced below 1 deals 1, unless the damage reduction below is total.
+        /// </summary>
+        public readonly int Defense;
+        /// <summary>
+        /// Fraction of damage taken that is removed, 0 to 1, applied after defense: <c>damage = round(damage * (1 - reduction))</c>.
+        /// 0 removes nothing and 1 makes every attack deal 0. It adds to the Divine artifact (0.10), the Endurance spell
+        /// (0.10) and the Apex buff (0.15), and the total is capped at 1. Below 1 a hit still deals at least 1.
+        /// Does not apply to debuffs: burning drains life directly, and lava hits use defense but not this.
+        /// </summary>
+        public readonly float DamageReduction;
+        /// <summary>Fraction added to the top running speed: 0.1 = 10% faster.</summary>
+        public readonly float MoveSpeedBonus;
+        /// <summary>Flat addition to run acceleration, px/tick².</summary>
+        public readonly float RunAccelerationBonus;
+        /// <summary>Pickaxe use speed multiplier: 7/6 shortens the pickaxe's use time and animation by that factor.</summary>
+        public readonly float MiningSpeedMultiplier;
+
+        public ClassStats(int maxLife = 100, int maxMana = 0, int defense = 0, float damageReduction = 0f,
+                          float moveSpeedBonus = 0f, float runAccelerationBonus = 0f, float miningSpeedMultiplier = 1f)
+        {
+            MaxLife = maxLife;
+            MaxMana = maxMana;
+            Defense = defense;
+            DamageReduction = damageReduction;
+            MoveSpeedBonus = moveSpeedBonus;
+            RunAccelerationBonus = runAccelerationBonus;
+            MiningSpeedMultiplier = miningSpeedMultiplier;
+        }
+
+        /// <summary>100 life, no mana, no defense or reduction, normal speed and mining.</summary>
+        public static readonly ClassStats Default = new(maxLife: 100);
+    }
+
+    /// <summary>
     /// A playable class: the stats and starting loadout a player takes on when they pick it. Pure data,
-    /// so a class is added by describing it in <see cref="ClassDefs"/>. Abilities a class has built in
-    /// (double jump, hook) are described here too; the rest will be attached the same way.
+    /// so a class is added by describing it in <see cref="ClassDefs"/>: its numbers (<see cref="ClassStats"/>), movement
+    /// features (<see cref="Mobility"/>), abilities and starting items.
     /// </summary>
     public sealed class ClassDef
     {
@@ -39,26 +84,14 @@ namespace CTG.Classes
         public string Name;
         public string Description;
 
-        public int MaxLife = 100;
-        /// <summary>0 = the class has no mana (and no mana bar).</summary>
-        public int MaxMana;
-        /// <summary>Flat defense added to the player.</summary>
-        public int BonusDefense;
-        /// <summary>Fraction added to the top running speed: 0.1 = 10% faster.</summary>
-        public float BonusMoveSpeed;
-        /// <summary>Flat addition to run acceleration, px/tick².</summary>
-        public float BonusRunAcceleration;
-        /// <summary>Pickaxe use speed multiplier: 7/6 shortens the pickaxe's use time and animation by that factor.</summary>
-        public float MiningSpeedMultiplier = 1f;
+        /// <summary>The class's numbers: life, mana, defense, damage reduction and movement/mining bonuses.</summary>
+        public ClassStats Stats = ClassStats.Default;
 
-        /// <summary>Holding down while falling makes the fall faster (see PlayerMotor.FastFall).</summary>
-        public bool FastFall;
-
-        /// <summary>One extra jump in mid-air. Null = none.</summary>
-        public DoubleJumpStats DoubleJump;
-
-        /// <summary>Ability 1: grappling hooks fired toward the cursor. Null = none.</summary>
-        public GrappleStats Hook;
+        /// <summary>
+        /// Movement features the class has: double jump, grappling hooks (ability 1), fast fall and so on. List at most
+        /// one of each kind.
+        /// </summary>
+        public Mobility[] Mobilities = Array.Empty<Mobility>();
 
         /// <summary>The abilities on slots 1-3 (default keys Shift, E, C). Missing entries are empty slots.</summary>
         public AbilityId[] Abilities = Array.Empty<AbilityId>();
@@ -74,9 +107,8 @@ namespace CTG.Classes
         static readonly ClassDef s_Archer = new()
         {
             Id = ClassId.Archer, Name = "Archer", Description = "",
-            MaxLife = 140, MaxMana = 0,
-            DoubleJump = new DoubleJumpStats(),
-            FastFall = true,
+            Stats = new ClassStats(maxLife: 140),
+            Mobilities = new Mobility[] { new DoubleJumpMobility(), new FastFallMobility() },
             Abilities = new[] { AbilityId.ArcherSprint, AbilityId.ArcherLightArrow, AbilityId.ArcherLuminite },
             Loadout = new[]
             {
@@ -90,9 +122,8 @@ namespace CTG.Classes
         static readonly ClassDef s_Tree = new()
         {
             Id = ClassId.Tree, Name = "Tree", Description = "",
-            MaxLife = 150, MaxMana = 0,
-            MiningSpeedMultiplier = 7f / 6f,
-            Hook = new GrappleStats(),
+            Stats = new ClassStats(maxLife: 150, miningSpeedMultiplier: 7f / 6f),
+            Mobilities = new Mobility[] { new GrappleMobility() },
             Loadout = new[]
             {
                 new LoadoutEntry(0, ItemId.ShardstonePickaxe),
