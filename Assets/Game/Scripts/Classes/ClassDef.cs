@@ -48,6 +48,8 @@ namespace CTG.Classes
         public float BonusMoveSpeed;
         /// <summary>Flat addition to run acceleration, px/tick².</summary>
         public float BonusRunAcceleration;
+        /// <summary>Pickaxe use speed multiplier: 7/6 shortens the pickaxe's use time and animation by that factor.</summary>
+        public float MiningSpeedMultiplier = 1f;
 
         /// <summary>One extra jump in mid-air. Null = none.</summary>
         public DoubleJumpStats DoubleJump;
@@ -55,19 +57,23 @@ namespace CTG.Classes
         /// <summary>Ability 1: grappling hooks fired toward the cursor. Null = none.</summary>
         public GrappleStats Hook;
 
+        /// <summary>The abilities on slots 1-3 (default keys Shift, E, C). Missing entries are empty slots.</summary>
+        public AbilityId[] Abilities = Array.Empty<AbilityId>();
+
         /// <summary>Items placed in the inventory on selection, replacing whatever was there.</summary>
         public IReadOnlyList<LoadoutEntry> Loadout = Array.Empty<LoadoutEntry>();
     }
 
     public static class ClassDefs
     {
-        // Archer: 140 life, no mana, double jump, Shardstone Pickaxe in slot 1 and Rancor in slot 3. The rest of its
+        // Archer: 140 life, no mana, double jump, Shardstone Pickaxe in slot 1 and Rancor in slot 3, with sprint, arrow mode and Luminite abilities. The rest of its
         // CTG2 loadout (potions, armor, accessories, dyes) is left out until those items exist.
         static readonly ClassDef s_Archer = new()
         {
-            Id = ClassId.Archer, Name = "Archer", Description = "Charge bow: Hellfire and Shimmer arrows.",
+            Id = ClassId.Archer, Name = "Archer", Description = "Charge bow: Ember, Gleam, Light and Luminite arrows.",
             MaxLife = 140, MaxMana = 0,
             DoubleJump = new DoubleJumpStats(),
+            Abilities = new[] { AbilityId.ArcherSprint, AbilityId.ArcherArrowMode, AbilityId.ArcherLuminite },
             Loadout = new[]
             {
                 new LoadoutEntry(0, ItemId.ShardstonePickaxe),
@@ -75,16 +81,17 @@ namespace CTG.Classes
             },
         };
 
-        // Tree: 150 life, no mana, the Upgraded Shardstone Pickaxe and the Grove Boomerang (plus the blocks every class
-        // gets). Its ability 1 is the Foliage Tendrils hook.
+        // Tree: 150 life, no mana, the Shardstone Pickaxe (mined at the upgraded speed) and the Grove Boomerang (plus the
+        // blocks every class gets). Its ability 1 is the Foliage Tendrils hook.
         static readonly ClassDef s_Tree = new()
         {
             Id = ClassId.Tree, Name = "Tree", Description = "Foliage Tendrils: up to 4 grappling hooks.",
             MaxLife = 150, MaxMana = 0,
+            MiningSpeedMultiplier = 7f / 6f,
             Hook = new GrappleStats(),
             Loadout = new[]
             {
-                new LoadoutEntry(0, ItemId.UpgradedShardstonePickaxe),
+                new LoadoutEntry(0, ItemId.ShardstonePickaxe),
                 new LoadoutEntry(2, ItemId.GroveBoomerang),
             },
         };

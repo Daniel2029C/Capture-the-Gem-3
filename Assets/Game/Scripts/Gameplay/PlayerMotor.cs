@@ -59,6 +59,11 @@ namespace CTG.Gameplay
         /// </summary>
         public LiquidType Liquid { get; set; }
 
+        /// <summary>Multiplies running speed and acceleration (sprint, slowed draws). Set by the player each tick.</summary>
+        public float RunSpeedScale { get; set; } = 1f;
+        /// <summary>Extra multiplier on run acceleration only (sprint). Set by the player each tick.</summary>
+        public float RunAccelerationScale { get; set; } = 1f;
+
         /// <summary>Down is held this tick, so glass platforms can be fallen through. Set by the player before each tick.</summary>
         public bool DropThrough { get; set; }
 
@@ -245,6 +250,9 @@ namespace CTG.Gameplay
                 s.RunAcceleration *= DoubleJump.RunAccelerationMultiplier;
                 s.MaxRunSpeed *= DoubleJump.MaxRunSpeedMultiplier;
             }
+
+            s.RunAcceleration *= RunSpeedScale * RunAccelerationScale;
+            s.MaxRunSpeed *= RunSpeedScale;
 
             float vx = Velocity.x;
 

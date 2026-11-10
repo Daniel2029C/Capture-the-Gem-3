@@ -14,7 +14,6 @@ namespace CTG.Items
         None = 0,
         DirtBlock = 2,
         ShardstonePickaxe = 10000,
-        UpgradedShardstonePickaxe = 10001,
         Rancor = 10002,
         WardBlock = 10003,
         GroveBoomerang = 10004,
@@ -54,13 +53,13 @@ namespace CTG.Items
         public float SpawnOffsetPx = 2f * 1.41421356f;
 
         [Header("Primary (left click)")]
-        public ProjectileId PrimaryArrow = ProjectileId.HellfireArrow;
+        public ProjectileId PrimaryArrow = ProjectileId.EmberArrow;
         public float PrimaryChargePerTick = 0.8f;
         /// <summary>Subtracted from the bow's damage before the power multiplier.</summary>
         public int PrimaryDamagePenalty = 4;
 
         [Header("Secondary (right click)")]
-        public ProjectileId SecondaryArrow = ProjectileId.ShimmerArrow;
+        public ProjectileId SecondaryArrow = ProjectileId.GleamArrow;
         public float SecondaryChargePerTick = 1f;
         /// <summary>Released below this charge, the secondary arrow is slower so its rise curves it sharply.</summary>
         public float SecondaryCurveBelowCharge = 30f;
@@ -132,23 +131,15 @@ namespace CTG.Items
             IconColor = new Color32(151, 107, 75, 255),
         };
 
-        // CTG2 Shardstone Pickaxe: useTime 7 / useAnimation 14, damage 4, knockback 0.7, scale 0.8.
+        // Shardstone Pickaxe: useTime 7 / useAnimation 14, damage 2, knockback 0.7, scale 0.8. Classes that had the
+        // upgraded version mine faster through ClassDef.MiningSpeedMultiplier (7/6 gives useTime 6 / useAnimation 12).
         // Pick power 190; no extra reach. 32 px sprite length is a placeholder until real art exists.
         static readonly ItemDef s_Shardstone = new()
         {
             Id = ItemId.ShardstonePickaxe, Name = "Shardstone Pickaxe", UseStyle = UseStyle.Swing,
             UseAnimation = 14, UseTime = 7, AutoReuse = true, PickPower = 190,
-            Damage = 4, Knockback = 0.7f, SizePx = 32, Scale = 0.8f,
+            Damage = 2, Knockback = 0.7f, SizePx = 32, Scale = 0.8f,
             IconColor = new Color32(120, 200, 220, 255),
-        };
-
-        // CTG2 Upgraded Shardstone Pickaxe: useTime 6 / useAnimation 12, damage 4, knockback 0.7, scale 0.8.
-        static readonly ItemDef s_UpgradedShardstone = new()
-        {
-            Id = ItemId.UpgradedShardstonePickaxe, Name = "Upgraded Shardstone Pickaxe", UseStyle = UseStyle.Swing,
-            UseAnimation = 12, UseTime = 6, AutoReuse = true, PickPower = 190,
-            Damage = 4, Knockback = 0.7f, SizePx = 32, Scale = 0.8f,
-            IconColor = new Color32(170, 120, 230, 255),
         };
 
         // CTG2 Rancor (archer bow): damage 37, shoot speed 6.7. useTime 28 is how long the bow stays
@@ -189,7 +180,6 @@ namespace CTG.Items
             ItemId.Rancor => s_Rancor,
             ItemId.DirtBlock => s_Dirt,
             ItemId.ShardstonePickaxe => s_Shardstone,
-            ItemId.UpgradedShardstonePickaxe => s_UpgradedShardstone,
             _ => s_None,
         };
     }

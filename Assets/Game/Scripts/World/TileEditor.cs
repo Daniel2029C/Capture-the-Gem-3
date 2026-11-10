@@ -29,6 +29,9 @@ namespace CTG.World
         readonly Dictionary<Vector2Int, TileDamage> m_Damage = new();
         readonly List<Vector2Int> m_Expired = new();
 
+        /// <summary>A tile was mined away: its position and what it was.</summary>
+        public event System.Action<Vector2Int, TileId> TileBroken;
+
         public TileEditor(TileWorld world)
         {
             m_World = world;
@@ -71,7 +74,9 @@ namespace CTG.World
                 return false;
             }
 
+            TileId broken = m_World.Get(tile.x, tile.y);
             m_World.SetRaw(tile.x, tile.y, TileId.Air);
+            TileBroken?.Invoke(tile, broken);
 
             // CTG rule: straight into the miner's inventory; whatever doesn't fit is lost.
             miner?.Add(def.Drop, 1);

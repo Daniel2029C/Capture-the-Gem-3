@@ -52,6 +52,11 @@ namespace CTG
             var editor = new TileEditor(World);
             clock.Register(new TileEditorTicker(editor));
 
+            // Dirt chips fly when dirt blocks are mined away (and, below, when projectiles strike dirt).
+            ParticleView.Create(transform);
+            editor.TileBroken += (tile, id) =>
+                ParticleView.DirtBurst((new Vector2(tile.x, tile.y) + new Vector2(0.5f, 0.5f)) * SimUnits.PixelsPerTile, id, 10, Vector2.up, 120f);
+
             CreateWorldRenderer();
 
             if (worldCamera == null) worldCamera = Camera.main;
@@ -105,6 +110,7 @@ namespace CTG
             var projectiles = new GameObject("Projectiles").AddComponent<ProjectileSystem>();
             projectiles.transform.SetParent(transform, false);
             projectiles.Initialize(World);
+            projectiles.TileStruck += (point, id) => ParticleView.DirtBurst(point, id, 6, Vector2.up, 100f);
 
 
             worldCamera.backgroundColor = new Color32(14, 18, 28, 255);
@@ -112,6 +118,7 @@ namespace CTG
             CameraView cameraView = worldCamera.GetComponent<CameraView>();
             if (cameraView == null) cameraView = worldCamera.gameObject.AddComponent<CameraView>();
             cameraView.Bind(Player, new Vector2(World.Width, World.Height));
+            if (worldCamera.GetComponent<BackdropView>() == null) BackdropView.Create(worldCamera);
 
             var cursor = new GameObject("Tile Cursor View").AddComponent<TileCursorView>();
             cursor.transform.SetParent(transform, false);

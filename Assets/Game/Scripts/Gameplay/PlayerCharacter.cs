@@ -79,6 +79,10 @@ namespace CTG.Gameplay
         public HealingPotion Potion { get; } = new();
         /// <summary>The class's grappling hooks (ability 1), or null if it has none.</summary>
         public GrapplingHooks Hooks { get; private set; }
+        /// <summary>Abilities 1-3 (default keys Shift, E, C).</summary>
+        public AbilitySet Abilities { get; } = new();
+        /// <summary>The Archer's shared ability state, or null for other classes.</summary>
+        public ArcherKit Archer { get; private set; }
         /// <summary>The player's own spawn room (world px), or null. Standing in it gives extra regeneration.</summary>
         public Rect? HomeRoomPx { get; set; }
         /// <summary>No controls reach the player (match countdown, results): they still stand and fall, but can't act.</summary>
@@ -175,6 +179,15 @@ namespace CTG.Gameplay
             Hooks = def.Hook != null ? new GrapplingHooks(def.Hook, m_World) : null;
             Potion.Reset();
 
+            bool archerKit = System.Array.Exists(def.Abilities, id => id >= AbilityId.ArcherSprint && id <= AbilityId.ArcherLuminite);
+            Archer = archerKit ? new ArcherKit() : null;
+            ItemUser.Bow.Kit = Archer;
+            ItemUser.MiningSpeedMultiplier = def.MiningSpeedMultiplier;
+            for (int i = 0; i < AbilitySet.SlotCount; i++)
+            {
+                Abilities.Set(i, i < def.Abilities.Length ? AbilityFactory.Create(def.Abilities[i], Archer) : null);
+            }
+
             ItemUser.Cancel();
             for (int i = 0; i < Inventory.SlotCount; i++) Inventory.Set(i, ItemId.None, 0);
             foreach (LoadoutEntry entry in def.Loadout) Inventory.Set(entry.Slot, entry.Item, entry.Count);
@@ -251,6 +264,12 @@ namespace CTG.Gameplay
                 }
             }
 
+            // Abilities act before the item so a mode change applies to this tick's shot.
+            Archer?.Tick();
+            Abilities.Tick(new AbilityContext(this, tick), input.AbilityPressed, input.AbilityHeld);
+            Motor.RunSpeedScale = Abilities.RunSpeedScale * (ItemUser.Bow.IsChargingLuminite && Archer != null ? Archer.Stats.LuminiteDrawRunScale : 1f);
+            Motor.RunAccelerationScale = Abilities.RunAccelerationScale;
+
             // The cursor tile is the one under the mouse, adjusted by the always-on cursor assist.
             Vector2 cursorPx = input.CursorWorld * SimUnits.PixelsPerTile;
             CursorTile = m_SmartCursor.Resolve(Inventory.Selected.Def, Team, Motor, ItemUser.BonusTileReach,
@@ -260,8 +279,8 @@ namespace CTG.Gameplay
             // While using an item, the player faces the way it was aimed (a drawn bow follows the cursor).
             if (ItemUser.IsUsing) Motor.Direction = ItemUser.UseDirection;
 
-            // Ability 1: fire a hook toward the cursor.
-            if (Hooks != null && input.Ability1) Hooks.TryFire(Motor.Center, cursorPx, Motor.Direction);
+            // Fire a hook toward the cursor.
+            if (Hooks != null && input.HookFire) Hooks.TryFire(Motor.Center, cursorPx, Motor.Direction);
 
             Motor.DropThrough = input.Down;
             UpdateLiquids();
@@ -278,6 +297,7 @@ namespace CTG.Gameplay
             }
 
             Hooks?.Update(Motor.Center);
+            EmitWalkDust(tick);
 
             if (ItemUser.Bow.Active) Motor.Direction = ItemUser.UseDirection;
 
@@ -285,6 +305,21 @@ namespace CTG.Gameplay
             Health.ZoneRegenPerSecond = HomeRoomPx.HasValue && HomeRoomPx.Value.Contains(Motor.Center) ? spawnRoomRegenPerSecond : 0f;
             Health.Tick();
             if (!Health.IsDead) Mana.Tick();
+        }
+
+        /// <summary>Kicks up a few dirt chips from the tile underfoot while running on dirt.</summary>
+        void EmitWalkDust(int tick)
+        {
+            if (!Motor.Grounded || Mathf.Abs(Motor.Velocity.x) < 1.2f || tick % 5 != 0) return;
+
+            int tx = Mathf.FloorToInt(Motor.Center.x / SimUnits.PixelsPerTile);
+            int ty = Mathf.FloorToInt((Motor.Position.y - 1f) / SimUnits.PixelsPerTile);
+            TileId below = m_World.Get(tx, ty);
+            if (!ParticleView.IsDirt(below)) return;
+
+            // Chips spray backwards, away from the direction of travel.
+            var feet = new Vector2(Motor.Center.x, Motor.Position.y + 1f);
+            ParticleView.DirtBurst(feet, below, 2, new Vector2(-Mathf.Sign(Motor.Velocity.x), 1.2f), 70f);
         }
 
         public int ApplyHit(in HitInfo hit)
@@ -383,6 +418,10 @@ namespace CTG.Gameplay
             Motor.Liquid = LiquidType.None;
             Motor.Teleport(m_SpawnPx);
             ItemUser.Cancel();
+            Abilities.Reset();
+            Archer?.Reset();
+            Motor.RunSpeedScale = 1f;
+            Motor.RunAccelerationScale = 1f;
             Mana.Refill();
         }
 

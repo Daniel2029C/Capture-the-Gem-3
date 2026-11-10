@@ -101,6 +101,7 @@ namespace CTG.UI
             DrawBuffs();
             DrawOverheadBars();
             DrawPotion();
+            DrawAbilities();
             DrawDummyStats();
             if (ShowDebug) DrawDebug();
         }
@@ -127,6 +128,34 @@ namespace CTG.UI
             {
                 int seconds = Mathf.CeilToInt(potion.CooldownLeft / (float)Core.SimUnits.TicksPerSecond);
                 GUI.Label(rect, seconds.ToString(), m_Big2);
+            }
+        }
+
+        /// <summary>Ability slots in a row to the right of the potion: key, name, status and a fill bar.</summary>
+        void DrawAbilities()
+        {
+            const float width = 96f, height = 56f, gap = 6f;
+            float left = (Screen.width + k_PotionSize) * 0.5f + 12f;
+            float top = HotbarTop - k_NameHeight - 6f - height;
+
+            for (int i = 0; i < AbilitySet.SlotCount; i++)
+            {
+                Ability ability = m_Player.Abilities[i];
+                if (ability == null) continue;
+
+                var rect = new Rect(left, top, width, height);
+                left += width + gap;
+
+                DrawRect(rect, ability.IsActive ? new Color(0.55f, 0.45f, 0.15f, 0.85f) : new Color(0.1f, 0.15f, 0.35f, 0.75f));
+                DrawRect(Inset(rect, 3f), new Color(0.2f, 0.3f, 0.6f, 0.85f));
+
+                GUI.Label(new Rect(rect.x + 6f, rect.y + 2f, rect.width - 8f, 18f), $"{AbilityKeys.Labels[i]} · {ability.Name}", m_Label);
+                GUI.Label(new Rect(rect.x + 6f, rect.y + 20f, rect.width - 8f, 18f), ability.Status, m_Label);
+
+                var bar = new Rect(rect.x + 6f, rect.yMax - 12f, rect.width - 12f, 6f);
+                DrawRect(bar, new Color(0f, 0f, 0f, 0.5f));
+                DrawRect(new Rect(bar.x, bar.y, bar.width * Mathf.Clamp01(ability.Fill), bar.height),
+                         ability.Fill >= 1f ? new Color(0.5f, 0.95f, 0.5f, 0.95f) : new Color(0.95f, 0.8f, 0.3f, 0.95f));
             }
         }
 
@@ -265,7 +294,7 @@ namespace CTG.UI
                 $"vel {motor.Velocity.x:0.00}, {motor.Velocity.y:0.00} px/tick   grounded {motor.Grounded}\n" +
                 $"tile {Mathf.FloorToInt(motor.Position.x / 16f)}, {Mathf.FloorToInt(motor.Position.y / 16f)}   " +
                 $"cursor {m_Player.CursorTile.x}, {m_Player.CursorTile.y}\n" +
-                "A/D move · Space jump/unhook · LMB use · RMB alt use / hook · 1-0 / wheel hotbar · H potion · K end match (dev)";
+                "A/D move · Space jump/unhook · LMB use · RMB alt use / hook · Shift/E/C abilities · 1-0 / wheel hotbar · H potion · K end match (dev)";
             GUI.Label(new Rect(k_Margin, k_Margin, 700f, 66f), text, m_Label);
         }
 

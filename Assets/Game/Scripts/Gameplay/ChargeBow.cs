@@ -38,6 +38,12 @@ namespace CTG.Gameplay
         /// <summary>Ticks spent at full charge, for the full-charge glow.</summary>
         public int FullChargeTicks { get; private set; }
         public ItemDef Item { get; private set; }
+        /// <summary>The Archer's shared ability state (arrow mode, light arrows, Luminite), or null.</summary>
+        public ArcherKit Kit { get; set; }
+        /// <summary>The current draw is the Luminite arrow (either button).</summary>
+        public bool IsLuminite { get; private set; }
+        /// <summary>Drawing the Luminite arrow right now: the player runs slower.</summary>
+        public bool IsChargingLuminite => IsCharging && IsLuminite;
 
         public ChargeBow(IDamageable owner) => m_Owner = owner;
 
@@ -52,6 +58,7 @@ namespace CTG.Gameplay
             Active = false;
             Released = false;
             Charge = 0f;
+            IsLuminite = false;
         }
 
         /// <summary>
@@ -73,7 +80,24 @@ namespace CTG.Gameplay
 
             if (!Active && tick >= m_LockedUntilTick)
             {
-                if (primaryHeld && tick - m_PrimaryLastDrawTick >= stats.UseDelayTicks)
+                if (Kit != null && Kit.LuminiteArmed && (primaryHeld || secondaryHeld))
+                {
+                    // An armed Luminite arrow takes the next draw, whichever button starts it.
+                    m_PrimaryLastDrawTick = tick;
+                    m_SecondaryLastDrawTick = tick;
+                    Begin(item, ProjectileId.LuminiteArrow);
+                    IsLuminite = true;
+                }
+                else if (Kit != null && Kit.LightMode)
+                {
+                    // Light mode: no draw. Left click looses a light arrow when a charge, the fire interval and
+                    // the switch delay allow it; right click does nothing.
+                }
+                else if (Kit != null && !Kit.CanDrawHeavy(tick))
+                {
+                    // A light arrow was just loosed: Ember and Gleam wait out the switch delay.
+                }
+                else if (primaryHeld && tick - m_PrimaryLastDrawTick >= stats.UseDelayTicks)
                 {
                     m_PrimaryLastDrawTick = tick;
                     Begin(item, stats.PrimaryArrow);
@@ -87,6 +111,11 @@ namespace CTG.Gameplay
                 }
             }
 
+            if (Kit != null && Kit.LightMode && !IsCharging && primaryHeld && !Kit.LuminiteArmed && tick >= m_LockedUntilTick && Kit.CanFireLight(tick))
+            {
+                FireLight(tick, item, cursorPx, motor);
+            }
+
             if (!Active) return;
 
             Vector2 aim = cursorPx - motor.Center;
@@ -94,13 +123,14 @@ namespace CTG.Gameplay
             Direction = Mathf.Cos(AimAngle) >= 0f ? 1 : -1;
 
             bool primary = Arrow == stats.PrimaryArrow;
-            bool holding = primary ? primaryHeld : secondaryHeld;
+            bool holding = IsLuminite ? primaryHeld || secondaryHeld : primary ? primaryHeld : secondaryHeld;
 
             if (Charge >= stats.MaxCharge) FullChargeTicks++;
 
             if (holding && !Released)
             {
-                Charge += primary ? stats.PrimaryChargePerTick : stats.SecondaryChargePerTick;
+                Charge += IsLuminite ? Kit.Stats.LuminiteChargePerTick
+                        : primary ? stats.PrimaryChargePerTick : stats.SecondaryChargePerTick;
             }
             else if (!Released)
             {
@@ -109,7 +139,7 @@ namespace CTG.Gameplay
 
             if (Released && !m_Fired)
             {
-                Fire(item, stats, primary, motor);
+                Fire(tick, item, stats, primary, motor);
                 m_Fired = true;
             }
 
@@ -129,9 +159,28 @@ namespace CTG.Gameplay
             FullChargeTicks = 0;
             m_TicksSinceRelease = 0;
             m_Fired = false;
+            IsLuminite = false;
         }
 
-        void Fire(ItemDef item, ChargeBowStats stats, bool primary, PlayerMotor motor)
+        /// <summary>A light arrow: instant, straight, fast, no knockback, fixed damage.</summary>
+        void FireLight(int tick, ItemDef item, Vector2 cursorPx, PlayerMotor motor)
+        {
+            ProjectileSystem projectiles = ProjectileSystem.Instance;
+            if (projectiles == null) return;
+
+            ArcherStats stats = Kit.Stats;
+            Vector2 aim = cursorPx - motor.Center;
+            Vector2 direction = aim.sqrMagnitude < 0.0001f ? new Vector2(motor.Direction, 0f) : aim.normalized;
+            projectiles.Spawn(ProjectileId.LightArrow, m_Owner, motor.Center + direction * stats.LightSpawnOffsetPx,
+                              direction * stats.LightSpeed, stats.LightDamage, 0f, 0);
+            Kit.OnLightFired(tick);
+            LastLightTick = tick;
+        }
+
+        /// <summary>Tick of the latest light arrow, for animation.</summary>
+        public int LastLightTick { get; private set; } = int.MinValue / 2;
+
+        void Fire(int tick, ItemDef item, ChargeBowStats stats, bool primary, PlayerMotor motor)
         {
             ProjectileSystem projectiles = ProjectileSystem.Instance;
             if (projectiles == null) return;
@@ -140,6 +189,20 @@ namespace CTG.Gameplay
             bool curved = !primary && Charge < stats.SecondaryCurveBelowCharge;
             float speedPenalty = curved ? stats.SecondaryCurvedSpeedPenalty : 0f;
             int damagePenalty = primary ? stats.PrimaryDamagePenalty : 0;
+            int extraUpdates = stats.ArrowExtraUpdates;
+            if (IsLuminite)
+            {
+                // The Luminite arrow: faster, harder-hitting, and straight from the draw (no curve penalty).
+                curved = false;
+                speedPenalty = -Kit.Stats.LuminiteSpeedBonus;
+                damagePenalty = -Kit.Stats.LuminiteDamageBonus;
+                extraUpdates = Kit.Stats.LuminiteExtraUpdates;
+                Kit.OnLuminiteFired();
+            }
+            else
+            {
+                Kit?.OnHeavyFired(tick);
+            }
 
             float powerRange = 1f - stats.MinPower;
             float speedPower = stats.MinPower + charge / stats.MaxCharge * powerRange;
@@ -150,7 +213,7 @@ namespace CTG.Gameplay
             int damage = (int)((item.Damage - damagePenalty) * damagePower);
             Vector2 spawn = motor.Center + direction * stats.SpawnOffsetPx;
 
-            projectiles.Spawn(Arrow, m_Owner, spawn, velocity, damage, item.Knockback, stats.ArrowExtraUpdates);
+            projectiles.Spawn(Arrow, m_Owner, spawn, velocity, damage, item.Knockback, extraUpdates);
         }
     }
 }

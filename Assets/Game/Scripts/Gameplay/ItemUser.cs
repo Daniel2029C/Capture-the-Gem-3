@@ -39,6 +39,9 @@ namespace CTG.Gameplay
         /// <summary>Facing locked for the current use: +1 right, -1 left.</summary>
         public int UseDirection { get; private set; } = 1;
 
+        /// <summary>Pickaxe speed from the class: use time and animation are divided by this. 1 = normal.</summary>
+        public float MiningSpeedMultiplier = 1f;
+
         /// <summary>Extra reach from accessories (e.g. Toolbox +1), added to the item's tileBoost.</summary>
         public int BonusTileReach;
 
@@ -95,8 +98,9 @@ namespace CTG.Gameplay
                 bool throwReady = def.UseStyle != UseStyle.Throw || tick >= m_ThrowReadyTick;
                 if ((def.AutoReuse || m_ReleasedUse) && throwReady)
                 {
-                    ItemAnimation = def.UseAnimation;
-                    ItemAnimationMax = def.UseAnimation;
+                    int animation = def.IsPickaxe ? ScaledByMining(def.UseAnimation) : def.UseAnimation;
+                    ItemAnimation = animation;
+                    ItemAnimationMax = animation;
                     if (!m_CarryCooldown) ItemTime = 0;
                     m_CarryCooldown = false;
                     UsingItem = held.Id;
@@ -121,7 +125,7 @@ namespace CTG.Gameplay
                 if (m_TileEditor.CanMine(cursorTile))
                 {
                     m_TileEditor.Hit(cursorTile, def.PickPower, tick, m_Inventory);
-                    ItemTime = def.UseTime;
+                    ItemTime = ScaledByMining(def.UseTime);
                 }
             }
             else if (def.PlacesTile)
@@ -134,6 +138,8 @@ namespace CTG.Gameplay
                 }
             }
         }
+
+        int ScaledByMining(int ticks) => Mathf.Max(1, Mathf.RoundToInt(ticks / Mathf.Max(0.1f, MiningSpeedMultiplier)));
 
         /// <summary>Ends the use in progress because another item was selected, leaving every cooldown as it was.</summary>
         void CutShortBySwitch(int tick)

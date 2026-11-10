@@ -14,8 +14,12 @@ namespace CTG.Input
         public bool UseItem;
         /// <summary>Secondary use (right click), e.g. a bow's second arrow.</summary>
         public bool UseAlt;
-        /// <summary>Ability 1 pressed this tick (right mouse for now), e.g. firing the Tree's hook.</summary>
-        public bool Ability1;
+        /// <summary>Fire the grappling hook (right mouse press for now).</summary>
+        public bool HookFire;
+        /// <summary>Ability keys pressed this tick: bit 0 = ability 1 (Left Shift), bit 1 = ability 2 (E), bit 2 = ability 3 (C).</summary>
+        public int AbilityPressed;
+        /// <summary>Ability keys held this tick, same bits.</summary>
+        public int AbilityHeld;
         /// <summary>Hotbar slot chosen by number key this tick (0-9), or -1.</summary>
         public int HotbarKey;
         /// <summary>Net scroll notches since the last tick; positive = scroll up.</summary>
@@ -42,7 +46,8 @@ namespace CTG.Input
         bool m_JumpLatched;
         bool m_UseLatched;
         bool m_AltLatched;
-        bool m_Ability1Latched;
+        bool m_HookLatched;
+        int m_AbilityLatched;
         int m_HotbarKeyLatched = -1;
         bool m_PotionLatched;
         bool m_DevEndLatched;
@@ -59,6 +64,9 @@ namespace CTG.Input
             {
                 if (keyboard.spaceKey.wasPressedThisFrame) m_JumpLatched = true;
                 if (keyboard.hKey.wasPressedThisFrame) m_PotionLatched = true;
+                if (keyboard.leftShiftKey.wasPressedThisFrame) m_AbilityLatched |= 1;
+                if (keyboard.eKey.wasPressedThisFrame) m_AbilityLatched |= 2;
+                if (keyboard.cKey.wasPressedThisFrame) m_AbilityLatched |= 4;
 
                 if (devKeys)
                 {
@@ -79,7 +87,7 @@ namespace CTG.Input
                 if (mouse.rightButton.wasPressedThisFrame)
                 {
                     m_AltLatched = true;
-                    m_Ability1Latched = true;
+                    m_HookLatched = true;
                 }
                 m_ScrollAccumulated += mouse.scroll.ReadValue().y;
             }
@@ -92,7 +100,7 @@ namespace CTG.Input
 
             var frame = new InputFrame
             {
-                Ability1 = m_Ability1Latched, HotbarKey = m_HotbarKeyLatched, UsePotion = m_PotionLatched, DevEndMatch = m_DevEndLatched,
+                HookFire = m_HookLatched, AbilityPressed = m_AbilityLatched, AbilityHeld = m_AbilityLatched, HotbarKey = m_HotbarKeyLatched, UsePotion = m_PotionLatched, DevEndMatch = m_DevEndLatched,
             };
 
             if (keyboard != null)
@@ -101,6 +109,9 @@ namespace CTG.Input
                 frame.Right = keyboard.dKey.isPressed || keyboard.rightArrowKey.isPressed;
                 frame.Jump = keyboard.spaceKey.isPressed || m_JumpLatched;
                 frame.Down = keyboard.sKey.isPressed || keyboard.downArrowKey.isPressed;
+                if (keyboard.leftShiftKey.isPressed) frame.AbilityHeld |= 1;
+                if (keyboard.eKey.isPressed) frame.AbilityHeld |= 2;
+                if (keyboard.cKey.isPressed) frame.AbilityHeld |= 4;
             }
 
             if (mouse != null)
@@ -125,7 +136,8 @@ namespace CTG.Input
             m_JumpLatched = false;
             m_UseLatched = false;
             m_AltLatched = false;
-            m_Ability1Latched = false;
+            m_HookLatched = false;
+            m_AbilityLatched = 0;
             m_HotbarKeyLatched = -1;
             m_PotionLatched = false;
             m_DevEndLatched = false;

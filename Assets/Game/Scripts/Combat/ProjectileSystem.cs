@@ -17,6 +17,9 @@ namespace CTG.Combat
         public Vector2 Velocity;
         public int Damage;
         public float Knockback;
+        /// <summary>Where it was fired from (centre, px) and how fast: a follow-up shot starts there.</summary>
+        public Vector2 OriginCenter;
+        public Vector2 LaunchVelocity;
         /// <summary>Updates run per tick beyond the first.</summary>
         public int ExtraUpdates;
         public int TimeLeft;
@@ -53,6 +56,9 @@ namespace CTG.Combat
 
         static ProjectileSystem s_Instance;
         public static ProjectileSystem Instance => s_Instance;
+
+        /// <summary>A projectile ran into a solid tile: the contact point (px) and the tile struck.</summary>
+        public event System.Action<Vector2, TileId> TileStruck;
 
         TileWorld m_World;
         readonly List<Projectile> m_Projectiles = new();
@@ -92,6 +98,8 @@ namespace CTG.Combat
                 ExtraUpdates = extraUpdates, TimeLeft = def.LifetimeUpdates, Penetrate = def.Penetrate,
                 Direction = velocity.x < 0f ? -1 : 1,
             };
+            projectile.OriginCenter = centerPx;
+            projectile.LaunchVelocity = velocity;
             projectile.Position = centerPx - projectile.Size * 0.5f;
             projectile.PreviousPosition = projectile.Position;
             m_Projectiles.Add(projectile);
@@ -148,6 +156,7 @@ namespace CTG.Combat
             p.Position = new Vector2(x, y);
             if (hit.HitLeft || hit.HitRight || hit.HitFloor || hit.HitCeiling)
             {
+                ReportTileStrike(p);
                 End(p);
                 return;
             }
@@ -158,6 +167,24 @@ namespace CTG.Combat
 
             p.TimeLeft--;
             if (p.TimeLeft <= 0 || p.Penetrate == 0) End(p);
+        }
+
+        /// <summary>Finds the solid tile just ahead of a projectile that stopped against one and reports it.</summary>
+        void ReportTileStrike(Projectile p)
+        {
+            if (TileStruck == null) return;
+
+            Vector2 heading = p.Velocity.sqrMagnitude > 0.0001f ? p.Velocity.normalized : Vector2.down;
+            Vector2 center = p.Center;
+            for (float reach = 2f; reach <= 12f; reach += 2f)
+            {
+                Vector2 probe = center + heading * (Mathf.Max(p.Def.WidthPx, p.Def.HeightPx) * 0.5f + reach);
+                int tx = Mathf.FloorToInt(probe.x / SimUnits.PixelsPerTile), ty = Mathf.FloorToInt(probe.y / SimUnits.PixelsPerTile);
+                if (!m_World.IsSolid(tx, ty)) continue;
+
+                TileStruck(probe, m_World.Get(tx, ty));
+                return;
+            }
         }
 
         /// <summary>
@@ -198,6 +225,7 @@ namespace CTG.Combat
                 p.Position = new Vector2(x, y);
                 if (hit.HitLeft || hit.HitRight || hit.HitFloor || hit.HitCeiling)
                 {
+                    ReportTileStrike(p);
                     p.Velocity = -p.Velocity;
                     p.Returning = true;
                 }
@@ -279,6 +307,7 @@ namespace CTG.Combat
                 p.HitTargets.Add(target);
                 if (p.Def.EndsOnHit && p.TimeLeft > 1) p.TimeLeft = 1;
                 if (p.Penetrate > 0) p.Penetrate--;
+                if (p.Def.DamageDecayPerHit < 1f) p.Damage = (int)(p.Damage * p.Def.DamageDecayPerHit);
             }
         }
 
@@ -286,6 +315,12 @@ namespace CTG.Combat
         {
             if (!p.Active) return;
             p.Active = false;
+
+            // The follow-up (a Luminite arrow's second shot) leaves from the firing spot along the same launch.
+            if (p.Def.FollowUp != ProjectileId.None && p.Owner != null)
+            {
+                Spawn(p.Def.FollowUp, p.Owner, p.OriginCenter, p.LaunchVelocity, p.Damage, p.Knockback, p.Def.FollowUpExtraUpdates);
+            }
 
             int size = p.Def.ExplosionSizePx;
             if (size <= 0) return;

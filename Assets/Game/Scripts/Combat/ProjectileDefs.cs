@@ -6,11 +6,17 @@ namespace CTG.Combat
     {
         None = 0,
         /// <summary>Falls after a short delay and explodes when it hits anything or expires.</summary>
-        HellfireArrow = 1,
+        EmberArrow = 1,
         /// <summary>Rises after a short delay (inverted gravity) and stops at the first target.</summary>
-        ShimmerArrow = 2,
+        GleamArrow = 2,
         /// <summary>Thrown by the Tree: flies out, turns back, and homes in on its owner.</summary>
         GroveBoomerang = 3,
+        /// <summary>Archer's quick shot: fast, straight, short range, no knockback.</summary>
+        LightArrow = 4,
+        /// <summary>Archer's armed shot: pierces several targets.</summary>
+        LuminiteArrow = 5,
+        /// <summary>Second shot of a Luminite arrow: launched from the original firing spot once the first arrow ends.</summary>
+        LuminiteFollowUp = 6,
     }
 
     /// <summary>
@@ -58,6 +64,15 @@ namespace CTG.Combat
         /// <summary>Side of the square blast that hits everything around it when the projectile ends. 0 = none.</summary>
         public int ExplosionSizePx;
         public Color Color = Color.white;
+        /// <summary>
+        /// A projectile launched when this one ends (for any reason): it starts at this one's firing position with this
+        /// one's launch velocity, and inherits its current damage. None = no follow-up.
+        /// </summary>
+        public ProjectileId FollowUp = ProjectileId.None;
+        /// <summary>Extra updates per tick for the follow-up.</summary>
+        public int FollowUpExtraUpdates;
+        /// <summary>Damage is multiplied by this after each target hit (1 = unchanged).</summary>
+        public float DamageDecayPerHit = 1f;
         /// <summary>Set for boomerangs: flight is steered by these stats instead of gravity.</summary>
         public BoomerangStats Boomerang;
     }
@@ -68,9 +83,9 @@ namespace CTG.Combat
 
         // 10×10, unlimited pierce but ends on the first hit, 3600-update lifetime, falls at 0.1/update
         // after 15 updates (cap 16). Explodes in a 64×64 blast however it ends.
-        static readonly ProjectileDef s_Hellfire = new()
+        static readonly ProjectileDef s_Ember = new()
         {
-            Id = ProjectileId.HellfireArrow, Name = "Hellfire Arrow",
+            Id = ProjectileId.EmberArrow, Name = "Ember Arrow",
             LifetimeUpdates = 3600, Penetrate = -1, EndsOnHit = true, ExplosionSizePx = 64,
             GravityDelayUpdates = 15, GravityPerUpdate = -0.1f, MaxFallSpeed = 16f,
             Color = new Color32(255, 140, 40, 255),
@@ -78,9 +93,9 @@ namespace CTG.Combat
 
         // 10×10, hits one target, 1200-update lifetime, rises at 0.1/update after 15 updates
         // (capped at 16 both ways).
-        static readonly ProjectileDef s_Shimmer = new()
+        static readonly ProjectileDef s_Gleam = new()
         {
-            Id = ProjectileId.ShimmerArrow, Name = "Shimmer Arrow",
+            Id = ProjectileId.GleamArrow, Name = "Gleam Arrow",
             LifetimeUpdates = 1200, Penetrate = 1,
             GravityDelayUpdates = 15, GravityPerUpdate = 0.1f, MaxFallSpeed = 16f, MaxRiseSpeed = 16f,
             Color = new Color32(230, 170, 255, 255),
@@ -95,11 +110,46 @@ namespace CTG.Combat
             Color = new Color32(235, 205, 70, 255),
         };
 
+        // Light arrow: 10×10, hits one target, flies dead straight (no gravity) and expires after 20 updates,
+        // about 25 tiles at its launch speed of 22 px/update.
+        static readonly ProjectileDef s_Light = new()
+        {
+            Id = ProjectileId.LightArrow, Name = "Light Arrow",
+            LifetimeUpdates = 20, Penetrate = 1, EndsOnHit = true,
+            GravityDelayUpdates = 1000, GravityPerUpdate = 0f,
+            Color = new Color32(255, 250, 200, 255),
+        };
+
+        // Luminite arrow: 10×10, passes through up to 4 targets, 90-update lifetime, gravity after 14 updates, damage x0.96 per
+        // hit. When it ends it launches the follow-up shot from where it was fired.
+        static readonly ProjectileDef s_Luminite = new()
+        {
+            Id = ProjectileId.LuminiteArrow, Name = "Luminite Arrow",
+            LifetimeUpdates = 90, Penetrate = 4,
+            GravityDelayUpdates = 14, GravityPerUpdate = -0.1f, MaxFallSpeed = 16f,
+            DamageDecayPerHit = 0.96f,
+            FollowUp = ProjectileId.LuminiteFollowUp, FollowUpExtraUpdates = 2,
+            Color = new Color32(90, 255, 200, 255),
+        };
+
+        // Follow-up shot: same body and flight as the first, run three updates per tick, damage x0.96 per hit.
+        static readonly ProjectileDef s_LuminiteFollowUp = new()
+        {
+            Id = ProjectileId.LuminiteFollowUp, Name = "Luminite Arrow",
+            LifetimeUpdates = 90, Penetrate = 4,
+            GravityDelayUpdates = 15, GravityPerUpdate = -0.1f, MaxFallSpeed = 16f,
+            DamageDecayPerHit = 0.96f,
+            Color = new Color32(150, 255, 225, 255),
+        };
+
         public static ProjectileDef Get(ProjectileId id) => id switch
         {
+            ProjectileId.LightArrow => s_Light,
+            ProjectileId.LuminiteArrow => s_Luminite,
+            ProjectileId.LuminiteFollowUp => s_LuminiteFollowUp,
             ProjectileId.GroveBoomerang => s_GroveBoomerang,
-            ProjectileId.HellfireArrow => s_Hellfire,
-            ProjectileId.ShimmerArrow => s_Shimmer,
+            ProjectileId.EmberArrow => s_Ember,
+            ProjectileId.GleamArrow => s_Gleam,
             _ => s_None,
         };
     }
