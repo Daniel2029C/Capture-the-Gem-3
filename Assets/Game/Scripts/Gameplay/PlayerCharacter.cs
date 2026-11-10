@@ -466,8 +466,8 @@ namespace CTG.Gameplay
             var attacker = hit.Source as PlayerCharacter;
             if (attacker != null && attacker != this && attacker.Team != Team) m_Attackers[attacker] = m_CurrentTick;
 
-            // Being hit by a projectile shakes off hooks that have latched or turned back.
-            if (hit.FromProjectile) Hooks?.ReleaseAttached();
+            // Movement features react to the hit (a grapple can be knocked loose, for instance).
+            if (Class != null) foreach (Mobility feature in Class.Mobilities) feature.OnHit(this, hit);
 
             CombatText.Spawn(Motor.Center, dealt.ToString(), CombatText.PlayerDamaged);
 
@@ -523,7 +523,7 @@ namespace CTG.Gameplay
             KillStreak = 0;
             ClearOfferings(true);
             ApexBuffTicksLeft = 0;
-            Hooks?.ReleaseAll();
+            if (Class != null) foreach (Mobility feature in Class.Mobilities) feature.OnDeath(this);
             ItemUser.Cancel();
             Motor.Velocity = Vector2.zero;
             CombatText.Spawn(Motor.Center + new Vector2(0f, 24f), "You died", CombatText.PlayerDamaged);

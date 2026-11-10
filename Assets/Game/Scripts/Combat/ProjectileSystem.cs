@@ -276,7 +276,7 @@ namespace CTG.Combat
 
                 if (target.ApplyHit(new HitInfo
                     {
-                        Damage = p.Damage, Knockback = p.Knockback, Direction = p.Direction, Source = p.Owner, FromProjectile = true,
+                        Damage = p.Damage, Knockback = p.Knockback, Direction = p.Direction, Source = p.Owner,
                     }) <= 0) continue;
 
                 p.RehitAt[target] = p.Age + b.RehitCooldownUpdates;
@@ -301,7 +301,7 @@ namespace CTG.Combat
 
                 if (target.ApplyHit(new HitInfo
                     {
-                        Damage = p.Damage, Knockback = p.Knockback, Direction = p.Direction, Source = p.Owner, FromProjectile = true,
+                        Damage = p.Damage, Knockback = p.Knockback, Direction = p.Direction, Source = p.Owner,
                     }) <= 0) continue;
 
                 p.HitTargets.Add(target);
@@ -340,7 +340,7 @@ namespace CTG.Combat
                 p.HitTargets.Add(target);
                 target.ApplyHit(new HitInfo
                 {
-                    Damage = p.Damage, Knockback = p.Knockback, Direction = p.Direction, Source = p.Owner, FromProjectile = true,
+                    Damage = p.Damage, Knockback = p.Knockback, Direction = p.Direction, Source = p.Owner,
                 });
             }
         }

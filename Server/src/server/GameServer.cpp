@@ -150,7 +150,7 @@ void GameServer::HandleChallengeResponse(const Address& from, ByteReader& r) {
 
     Accept accept;
     accept.playerId = id;
-    accept.team = (id % 2) ? 3 : 1;  // TODO(you): real team assignment from the matchmaker's roster (Team enum: Red 1, Blue 3)
+    accept.team = (id % 2) ? 2 : 1;  // TODO(you): real team assignment from the matchmaker's roster (Team enum: Red 1, Blue 2, Monster 3)
     accept.serverTick = m_tick;
     accept.mapHash = m_mapHash;
     accept.matchSeed = 0;            // TODO(you): per-match seed

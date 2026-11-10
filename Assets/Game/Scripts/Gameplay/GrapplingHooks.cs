@@ -1,5 +1,7 @@
 using System.Collections.Generic;
+using CTG.Combat;
 using CTG.Core;
+using CTG.Items;
 using CTG.World;
 using UnityEngine;
 
@@ -38,6 +40,17 @@ namespace CTG.Gameplay
         {
             if (player.Hooks != null && player.Hooks.Stats == this) player.SetGrapple(null);
         }
+
+        /// <summary>
+        /// Any hit knocks latched and retreating hooks loose (flying hooks are unaffected), except one from the
+        /// Shardstone Pickaxe: swinging a pickaxe at a grappling player does not break their grapple.
+        /// </summary>
+        public override void OnHit(PlayerCharacter player, in HitInfo hit)
+        {
+            if (hit.Weapon != ItemId.ShardstonePickaxe) player.Hooks?.ReleaseAttached();
+        }
+
+        public override void OnDeath(PlayerCharacter player) => player.Hooks?.ReleaseAll();
     }
 
     public enum HookState

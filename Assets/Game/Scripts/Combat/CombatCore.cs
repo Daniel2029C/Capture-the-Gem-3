@@ -1,16 +1,17 @@
 using System.Collections.Generic;
+using CTG.Items;
 using UnityEngine;
 
 namespace CTG.Combat
 {
-    /// <summary>Teams use CTG2's numbering: 0 = neutral (hittable by everyone), 1 = red, 3 = blue.</summary>
+    /// <summary>Teams: 0 = neutral (hittable by everyone), 1 = red, 2 = blue, 3 = monsters.</summary>
     public enum Team
     {
         Neutral = 0,
         Red = 1,
+        Blue = 2,
         /// <summary>Hostile creatures (mobs): hostile to every player, never to each other.</summary>
-        Monster = 2,
-        Blue = 3,
+        Monster = 3,
     }
 
     public static class TeamColors
@@ -33,8 +34,8 @@ namespace CTG.Combat
         /// <summary>+1 pushes the target right, -1 left.</summary>
         public int Direction;
         public IDamageable Source;
-        /// <summary>Dealt by a projectile (arrows, blasts) rather than a melee swing.</summary>
-        public bool FromProjectile;
+        /// <summary>The item whose swing dealt this hit (melee); None for projectiles, mobs and everything else.</summary>
+        public ItemId Weapon;
     }
 
     public interface IDamageable

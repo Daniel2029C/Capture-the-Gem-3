@@ -188,7 +188,7 @@ namespace CTG.Gameplay
                 m_HitThisUse.Add(target);
                 target.ApplyHit(new HitInfo
                 {
-                    Damage = def.IsPickaxe ? def.Damage : ScaledDamage(def.Damage), Knockback = def.Knockback, Direction = UseDirection, Source = m_Owner,
+                    Damage = def.IsPickaxe ? def.Damage : ScaledDamage(def.Damage), Knockback = def.Knockback, Direction = UseDirection, Source = m_Owner, Weapon = def.Id,
                 });
             }
         }

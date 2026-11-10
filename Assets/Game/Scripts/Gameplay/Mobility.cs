@@ -1,3 +1,5 @@
+using CTG.Combat;
+
 namespace CTG.Gameplay
 {
     /// <summary>
@@ -15,5 +17,11 @@ namespace CTG.Gameplay
 
         /// <summary>Takes it away again. Called when the player's class changes.</summary>
         public abstract void Remove(PlayerCharacter player);
+
+        /// <summary>The player took damage from a hit (not called for hits that deal nothing). Does nothing by default.</summary>
+        public virtual void OnHit(PlayerCharacter player, in HitInfo hit) { }
+
+        /// <summary>The player died. Does nothing by default.</summary>
+        public virtual void OnDeath(PlayerCharacter player) { }
     }
 }
