@@ -117,13 +117,9 @@ namespace CTG.Gameplay
 
         /// <summary>The shop panel is open (only possible at base).</summary>
         public bool ShopOpen { get; private set; }
-        /// <summary>Ticks left of the Apex buff from the mid-boss (+15% damage, 15% damage reduction); lost on death.</summary>
-        public int ApexBuffTicksLeft { get; private set; }
-        public static readonly int ApexBuffTicks = SimUnits.SecondsToTicks(120f);
-        public void GrantApexBuff() => ApexBuffTicksLeft = ApexBuffTicks;
-
-        /// <summary>Ticks left of the Endurance spell's damage reduction.</summary>
-        public int EnduranceTicksLeft { get; private set; }
+        /// <summary>Buffs and debuffs on the player (burning, nectar regeneration, the Apex buff, Endurance).</summary>
+        public StatusEffects Effects { get; } = new();
+        EffectModifiers m_EffectModifiers = EffectModifiers.None;
         /// <summary>The class's grappling hooks (ability 1), or null if it has none.</summary>
         public GrapplingHooks Hooks { get; private set; }
 
@@ -228,8 +224,7 @@ namespace CTG.Gameplay
             Progress.Reset();
             Purchases.Reset();
             Offerings = 0;
-            ApexBuffTicksLeft = 0;
-            EnduranceTicksLeft = 0;
+            Effects.ClearAll();
             ShopOpen = false;
 
             bool archerKit = System.Array.Exists(def.Abilities, id => id >= AbilityId.ArcherSprint && id <= AbilityId.ArcherLuminite);
@@ -320,8 +315,6 @@ namespace CTG.Gameplay
 
             Progress.Tick();
             Purchases.Spells.Tick();
-            if (EnduranceTicksLeft > 0) EnduranceTicksLeft--;
-            if (ApexBuffTicksLeft > 0) ApexBuffTicksLeft--;
             RefreshModifiers();
 
             if (input.ShopPressed) ShopOpen = !ShopOpen && InBase;
@@ -382,15 +375,20 @@ namespace CTG.Gameplay
             if (ItemUser.Bow.Active) Motor.Direction = ItemUser.UseDirection;
 
             HandleDevInput(input, cursorPx);
-            Health.RegenPerSecond = regenPerSecond + Modifiers.RegenBonusPerSecond;
+            // Effects applied earlier this tick (lava, nectar) count now; they are counted down after life is updated.
+            m_EffectModifiers = Effects.Aggregate();
+            Health.RegenPerSecond = regenPerSecond + Modifiers.RegenBonusPerSecond + m_EffectModifiers.RegenPerSecond;
             Health.ZoneRegenPerSecond = HomeRoomPx.HasValue && HomeRoomPx.Value.Contains(Motor.Center) ? spawnRoomRegenPerSecond : 0f;
+            Health.DrainPerSecond = m_EffectModifiers.NetDrainPerSecond;
+            Health.RegenBlocked = m_EffectModifiers.BlocksRegen;
             Health.Tick();
+            if (Health.IsDead) Die(); // drained to death (burning)
+            Effects.Tick();
             if (!Health.IsDead) Mana.Tick();
         }
 
         const int k_HealingPotionAmount = 50;
         static readonly int k_SpellCooldownTicks = SimUnits.SecondsToTicks(60f);
-        static readonly int k_EnduranceTicks = SimUnits.SecondsToTicks(5f);
 
         /// <summary>True inside the player's own spawn room (or anywhere on maps without one).</summary>
         public bool InBase => !HomeRoomPx.HasValue || HomeRoomPx.Value.Contains(Motor.Center);
@@ -400,7 +398,7 @@ namespace CTG.Gameplay
         /// <summary>Recomputes the artifact, level and effect multipliers and applies the ones that live on other objects.</summary>
         void RefreshModifiers()
         {
-            Modifiers = PlayerModifiers.Compute(Purchases, Progress, EnduranceTicksLeft > 0, ApexBuffTicksLeft > 0);
+            Modifiers = PlayerModifiers.Compute(Purchases, Progress, Effects.Aggregate());
             ItemUser.WeaponDamageMultiplier = Modifiers.WeaponDamageMultiplier;
             ItemUser.MiningSpeedMultiplier = (Class != null ? Class.Stats.MiningSpeedMultiplier : 1f) * Modifiers.MiningSpeedMultiplier;
 
@@ -434,7 +432,7 @@ namespace CTG.Gameplay
             }
             else
             {
-                EnduranceTicksLeft = k_EnduranceTicks;
+                Effects.Apply(StatusEffectDefs.Endurance);
                 CombatText.Spawn(Motor.Center, "Endurance", CombatText.Healed);
             }
         }
@@ -522,7 +520,7 @@ namespace CTG.Gameplay
             DeathStreak++;
             KillStreak = 0;
             ClearOfferings(true);
-            ApexBuffTicksLeft = 0;
+            Effects.ClearOnDeath();
             if (Class != null) foreach (Mobility feature in Class.Mobilities) feature.OnDeath(this);
             ItemUser.Cancel();
             Motor.Velocity = Vector2.zero;
@@ -556,8 +554,8 @@ namespace CTG.Gameplay
 
             if (inNectar)
             {
-                Health.GrantRegenBuff(SimUnits.SecondsToTicks(nectarBuffSeconds));
-                if (!inLava) Health.Extinguish();
+                Effects.Apply(StatusEffectDefs.Regeneration, SimUnits.SecondsToTicks(nectarBuffSeconds));
+                if (!inLava) Effects.Remove(StatusEffectDefs.Burning);
             }
 
             if (!inLava || m_LavaCooldown > 0) return;
@@ -573,7 +571,7 @@ namespace CTG.Gameplay
                 return;
             }
 
-            Health.Ignite(SimUnits.SecondsToTicks(lavaBurnSeconds));
+            Effects.Apply(StatusEffectDefs.Burning, SimUnits.SecondsToTicks(lavaBurnSeconds));
         }
 
         void Respawn()
@@ -610,7 +608,7 @@ namespace CTG.Gameplay
 
             // Burning flickers orange; blink while immune after a hit.
             Color tint = Color.white;
-            if (Health.IsBurning) tint = Color.Lerp(Color.white, new Color(1f, 0.5f, 0.15f), 0.55f + 0.25f * Mathf.Sin(Time.time * 18f));
+            if (Effects.Has(StatusEffectDefs.Burning)) tint = Color.Lerp(Color.white, new Color(1f, 0.5f, 0.15f), 0.55f + 0.25f * Mathf.Sin(Time.time * 18f));
             if (Health.IsImmune && (Time.frameCount / 4) % 2 == 0) tint.a = 0.4f;
             m_Body.color = tint;
 

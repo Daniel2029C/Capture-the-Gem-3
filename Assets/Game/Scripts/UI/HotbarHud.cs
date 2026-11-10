@@ -231,31 +231,18 @@ namespace CTG.UI
             }
         }
 
-        /// <summary>Active debuffs under the bars, with the seconds left.</summary>
+        /// <summary>Active buffs and debuffs under the bars, with the time left.</summary>
         void DrawBuffs()
         {
-            Health health = m_Player.Health;
             float top = k_Margin + 50f + (m_Player.Mana.Max > 0 ? 50f : 0f);
             const float lineHeight = 24f;
 
-            if (health.IsBurning)
+            foreach (ActiveEffect effect in m_Player.Effects.Active)
             {
-                int seconds = Mathf.CeilToInt(health.BurnTicksLeft / (float)Core.SimUnits.TicksPerSecond);
-                GUI.Label(new Rect(Screen.width - 260f - k_Margin, top, 260f, 22f), $"On Fire!  {seconds}s", m_Label);
+                int seconds = Mathf.CeilToInt(effect.TicksLeft / (float)Core.SimUnits.TicksPerSecond);
+                string time = seconds >= 60 ? $"{seconds / 60}:{seconds % 60:00}" : $"{seconds}s";
+                GUI.Label(new Rect(Screen.width - 260f - k_Margin, top, 260f, 22f), $"{effect.Def.Name}  {time}", m_Label);
                 top += lineHeight;
-            }
-
-            if (m_Player.ApexBuffTicksLeft > 0)
-            {
-                int seconds = Mathf.CeilToInt(m_Player.ApexBuffTicksLeft / (float)Core.SimUnits.TicksPerSecond);
-                GUI.Label(new Rect(Screen.width - 260f - k_Margin, top, 260f, 22f), $"Apex buff  {seconds / 60}:{seconds % 60:00}", m_Label);
-                top += lineHeight;
-            }
-
-            if (health.HasRegenBuff)
-            {
-                int seconds = Mathf.CeilToInt(health.RegenBuffTicksLeft / (float)Core.SimUnits.TicksPerSecond);
-                GUI.Label(new Rect(Screen.width - 260f - k_Margin, top, 260f, 22f), $"Regeneration  {seconds}s", m_Label);
             }
         }
 

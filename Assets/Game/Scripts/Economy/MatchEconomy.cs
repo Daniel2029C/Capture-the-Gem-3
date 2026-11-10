@@ -63,7 +63,7 @@ namespace CTG.Economy
             var all = Combat.DamageableRegistry.All;
             for (int i = 0; i < all.Count; i++)
             {
-                if (all[i] is PlayerCharacter player && player.Team == killer.Team) player.GrantApexBuff();
+                if (all[i] is PlayerCharacter player && player.Team == killer.Team) player.Effects.Apply(Combat.StatusEffectDefs.Apex);
             }
         }
 
