@@ -31,6 +31,12 @@ namespace CTG.Combat
         public float DrainReductionPerSecond;
         /// <summary>No life regeneration at all while this is active.</summary>
         public bool BlocksRegen;
+        /// <summary>Extra mana regenerated per second. Effects add together.</summary>
+        public float ManaRegenPerSecond;
+        /// <summary>Mana lost per second (never below zero). Effects add together. Unlike life drain it does not stop regeneration by itself: regeneration and drain net out.</summary>
+        public float ManaDrainPerSecond;
+        /// <summary>No mana regeneration at all while this is active.</summary>
+        public bool BlocksManaRegen;
 
         public static EffectModifiers None => new() { WeaponDamageMultiplier = 1f };
 
@@ -45,6 +51,9 @@ namespace CTG.Combat
             DrainPerSecond += other.DrainPerSecond;
             DrainReductionPerSecond += other.DrainReductionPerSecond;
             BlocksRegen |= other.BlocksRegen;
+            ManaRegenPerSecond += other.ManaRegenPerSecond;
+            ManaDrainPerSecond += other.ManaDrainPerSecond;
+            BlocksManaRegen |= other.BlocksManaRegen;
         }
     }
 

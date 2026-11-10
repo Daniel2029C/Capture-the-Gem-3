@@ -384,7 +384,13 @@ namespace CTG.Gameplay
             Health.Tick();
             if (Health.IsDead) Die(); // drained to death (burning)
             Effects.Tick();
-            if (!Health.IsDead) Mana.Tick();
+            if (!Health.IsDead)
+            {
+                Mana.RegenPerSecond = manaRegenPerSecond + m_EffectModifiers.ManaRegenPerSecond;
+                Mana.DrainPerSecond = m_EffectModifiers.ManaDrainPerSecond;
+                Mana.RegenBlocked = m_EffectModifiers.BlocksManaRegen;
+                Mana.Tick();
+            }
         }
 
         const int k_HealingPotionAmount = 50;
