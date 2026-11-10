@@ -67,6 +67,14 @@ namespace CTG.Gameplay
         /// <summary>Down is held this tick, so glass platforms can be fallen through. Set by the player before each tick.</summary>
         public bool DropThrough { get; set; }
 
+        /// <summary>
+        /// Holding down while falling in the air speeds the fall up (set by the class). Gravity is multiplied; the
+        /// fall speed cap is unchanged. It does nothing on the ground, in liquid, or while rising.
+        /// </summary>
+        public bool FastFall { get; set; }
+
+        const float k_FastFallGravityMultiplier = 2f;
+
         public bool InLiquid => Liquid != LiquidType.None;
 
         const float k_LavaGravity = 0.2f;
@@ -342,7 +350,13 @@ namespace CTG.Gameplay
         void ApplyGravity()
         {
             MovementStats s = Active;
-            Velocity.y -= s.Gravity;
+            float gravity = s.Gravity;
+            if (FastFall && DropThrough && !Grounded && Liquid == LiquidType.None && Velocity.y <= 0f)
+            {
+                gravity *= k_FastFallGravityMultiplier;
+            }
+
+            Velocity.y -= gravity;
             if (Velocity.y < -s.MaxFallSpeed) Velocity.y = -s.MaxFallSpeed;
         }
 

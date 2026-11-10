@@ -37,18 +37,19 @@ namespace CTG.Gameplay
     }
 
     /// <summary>
-    /// State the Archer's three abilities and its bow share: the arrow mode (Normal = Ember on left click and
-    /// Gleam on right click; Light = Light arrows on left click only), the light arrow charges, the delay that
+    /// State the Archer's three abilities and its bow share: the light arrow charges, the delay that
     /// separates the two kinds of shot, and the armed Luminite arrow.
     /// </summary>
     public sealed class ArcherKit
     {
         public readonly ArcherStats Stats = new();
 
-        public bool LightMode { get; private set; }
         public float LightCharges { get; private set; }
         public bool LuminiteArmed { get; private set; }
-        public int LuminiteCooldown { get; private set; }
+        /// <summary>Ticks left before the Luminite arrow can be armed again (rounded up).</summary>
+        public int LuminiteCooldown => Mathf.CeilToInt(m_LuminiteCooldownLeft);
+
+        float m_LuminiteCooldownLeft;
 
         enum ShotKind { None, Light, Heavy }
 
@@ -60,33 +61,31 @@ namespace CTG.Gameplay
 
         public void Reset()
         {
-            LightMode = false;
             LightCharges = Stats.MaxLightCharges;
             LuminiteArmed = false;
-            LuminiteCooldown = 0;
+            m_LuminiteCooldownLeft = 0f;
             m_NextLightTick = 0;
             m_LastKind = ShotKind.None;
             m_LastShotTick = 0;
         }
 
         /// <summary>Regeneration and cooldowns; once per tick while alive.</summary>
-        public void Tick()
+        /// <param name="cooldownRate">1 normally; above 1 when cooldown reductions make timers run faster.</param>
+        public void Tick(float cooldownRate = 1f)
         {
             if (LightCharges < Stats.MaxLightCharges)
             {
-                LightCharges = Mathf.Min(Stats.MaxLightCharges, LightCharges + 1f / Stats.LightRegenTicks);
+                LightCharges = Mathf.Min(Stats.MaxLightCharges, LightCharges + cooldownRate / Stats.LightRegenTicks);
             }
 
             // The Luminite cooldown only runs once the arrow has been used.
-            if (!LuminiteArmed && LuminiteCooldown > 0) LuminiteCooldown--;
+            if (!LuminiteArmed && m_LuminiteCooldownLeft > 0f) m_LuminiteCooldownLeft = Mathf.Max(0f, m_LuminiteCooldownLeft - cooldownRate);
         }
-
-        public void ToggleMode() => LightMode = !LightMode;
 
         public bool CanDrawHeavy(int tick) => m_LastKind != ShotKind.Light || tick >= m_LastShotTick + Stats.SwitchDelayTicks;
 
         public bool CanFireLight(int tick) =>
-            LightMode && LightCharges >= 1f && tick >= m_NextLightTick
+            LightCharges >= 1f && tick >= m_NextLightTick
             && (m_LastKind != ShotKind.Heavy || tick >= m_LastShotTick + Stats.SwitchDelayTicks);
 
         public void OnLightFired(int tick)
@@ -111,26 +110,32 @@ namespace CTG.Gameplay
         public void OnLuminiteFired()
         {
             LuminiteArmed = false;
-            LuminiteCooldown = Stats.LuminiteCooldownTicks;
+            m_LuminiteCooldownLeft = Stats.LuminiteCooldownTicks;
         }
     }
 
-    /// <summary>Ability 2: toggles between Normal (Ember/Gleam) and Light arrow mode.</summary>
-    public sealed class ArrowModeAbility : Ability
+    /// <summary>
+    /// Ability 2: while holding the bow, pressing the key looses a Light arrow toward the cursor (one charge each).
+    /// </summary>
+    public sealed class LightArrowAbility : Ability
     {
         readonly ArcherKit m_Kit;
 
-        public ArrowModeAbility(ArcherKit kit) => m_Kit = kit;
+        public LightArrowAbility(ArcherKit kit) => m_Kit = kit;
 
-        public override string Name => "Arrows";
-        public override float Fill => m_Kit.LightMode ? m_Kit.LightCharges / m_Kit.Stats.MaxLightCharges : 1f;
-        public override bool IsActive => m_Kit.LightMode;
-        public override string Status => m_Kit.LightMode ? $"Light {Mathf.FloorToInt(m_Kit.LightCharges)}/{m_Kit.Stats.MaxLightCharges}" : "Ember / Gleam";
+        public override string Name => "Light Arrow";
+        public override float Fill => m_Kit.LightCharges / m_Kit.Stats.MaxLightCharges;
+        public override string Status => $"{Mathf.FloorToInt(m_Kit.LightCharges)}/{m_Kit.Stats.MaxLightCharges}";
 
         public override void Tick(in AbilityContext context, bool pressed, bool held)
         {
-            // Switching mid-draw would leave a half-drawn arrow, so it waits until the bow is let go.
-            if (pressed && !context.Player.ItemUser.Bow.IsCharging) m_Kit.ToggleMode();
+            if (!pressed) return;
+
+            PlayerCharacter player = context.Player;
+            if (player.Inventory.Selected.Def.UseStyle != Items.UseStyle.ChargeBow) return;
+
+            Vector2 cursorPx = player.LastInput.CursorWorld * Core.SimUnits.PixelsPerTile;
+            player.ItemUser.Bow.TryFireLight(context.Tick, cursorPx, player.Motor);
         }
     }
 

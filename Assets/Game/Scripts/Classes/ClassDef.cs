@@ -38,6 +38,8 @@ namespace CTG.Classes
         public ClassId Id;
         public string Name;
         public string Description;
+        /// <summary>A frontline class (worth less for killing). The Tree is one; the Archer is not.</summary>
+        public bool IsFrontline;
 
         public int MaxLife = 100;
         /// <summary>0 = the class has no mana (and no mana bar).</summary>
@@ -50,6 +52,9 @@ namespace CTG.Classes
         public float BonusRunAcceleration;
         /// <summary>Pickaxe use speed multiplier: 7/6 shortens the pickaxe's use time and animation by that factor.</summary>
         public float MiningSpeedMultiplier = 1f;
+
+        /// <summary>Holding down while falling makes the fall faster (see PlayerMotor.FastFall).</summary>
+        public bool FastFall;
 
         /// <summary>One extra jump in mid-air. Null = none.</summary>
         public DoubleJumpStats DoubleJump;
@@ -66,14 +71,15 @@ namespace CTG.Classes
 
     public static class ClassDefs
     {
-        // Archer: 140 life, no mana, double jump, Shardstone Pickaxe in slot 1 and Rancor in slot 3, with sprint, arrow mode and Luminite abilities. The rest of its
+        // Archer: 140 life, no mana, double jump, Shardstone Pickaxe in slot 1 and Rancor in slot 3, with sprint, light arrow and Luminite abilities. The rest of its
         // CTG2 loadout (potions, armor, accessories, dyes) is left out until those items exist.
         static readonly ClassDef s_Archer = new()
         {
             Id = ClassId.Archer, Name = "Archer", Description = "Charge bow: Ember, Gleam, Light and Luminite arrows.",
             MaxLife = 140, MaxMana = 0,
             DoubleJump = new DoubleJumpStats(),
-            Abilities = new[] { AbilityId.ArcherSprint, AbilityId.ArcherArrowMode, AbilityId.ArcherLuminite },
+            FastFall = true,
+            Abilities = new[] { AbilityId.ArcherSprint, AbilityId.ArcherLightArrow, AbilityId.ArcherLuminite },
             Loadout = new[]
             {
                 new LoadoutEntry(0, ItemId.ShardstonePickaxe),
@@ -87,6 +93,7 @@ namespace CTG.Classes
         {
             Id = ClassId.Tree, Name = "Tree", Description = "Foliage Tendrils: up to 4 grappling hooks.",
             MaxLife = 150, MaxMana = 0,
+            IsFrontline = true,
             MiningSpeedMultiplier = 7f / 6f,
             Hook = new GrappleStats(),
             Loadout = new[]

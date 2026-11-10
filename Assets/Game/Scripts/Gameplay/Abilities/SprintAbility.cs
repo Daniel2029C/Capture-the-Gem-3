@@ -73,7 +73,7 @@ namespace CTG.Gameplay
 
             // Winded with the key still down also counts as not sprinting, so the refill timer runs.
             if (m_IdleTicks < m_Stats.IdleTicksBeforeRecharge) m_IdleTicks++;
-            else m_Reserve = Mathf.Min(m_Stats.MaxTicks, m_Reserve + m_Stats.RechargePerTick);
+            else m_Reserve = Mathf.Min(m_Stats.MaxTicks, m_Reserve + m_Stats.RechargePerTick * context.CooldownRate);
         }
     }
 }

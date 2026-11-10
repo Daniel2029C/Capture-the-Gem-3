@@ -38,8 +38,10 @@ namespace CTG.Gameplay
         /// <summary>Ticks spent at full charge, for the full-charge glow.</summary>
         public int FullChargeTicks { get; private set; }
         public ItemDef Item { get; private set; }
-        /// <summary>The Archer's shared ability state (arrow mode, light arrows, Luminite), or null.</summary>
+        /// <summary>The Archer's shared ability state (light arrows, Luminite), or null.</summary>
         public ArcherKit Kit { get; set; }
+        /// <summary>Multiplier on the damage of every arrow loosed (level and artifacts); set by the item user each tick.</summary>
+        public float DamageMultiplier { get; set; } = 1f;
         /// <summary>The current draw is the Luminite arrow (either button).</summary>
         public bool IsLuminite { get; private set; }
         /// <summary>Drawing the Luminite arrow right now: the player runs slower.</summary>
@@ -88,11 +90,6 @@ namespace CTG.Gameplay
                     Begin(item, ProjectileId.LuminiteArrow);
                     IsLuminite = true;
                 }
-                else if (Kit != null && Kit.LightMode)
-                {
-                    // Light mode: no draw. Left click looses a light arrow when a charge, the fire interval and
-                    // the switch delay allow it; right click does nothing.
-                }
                 else if (Kit != null && !Kit.CanDrawHeavy(tick))
                 {
                     // A light arrow was just loosed: Ember and Gleam wait out the switch delay.
@@ -109,11 +106,6 @@ namespace CTG.Gameplay
                     if (tick - m_PrimaryLastDrawTick >= stats.UseDelayTicks) m_PrimaryLastDrawTick = tick;
                     Begin(item, stats.SecondaryArrow);
                 }
-            }
-
-            if (Kit != null && Kit.LightMode && !IsCharging && primaryHeld && !Kit.LuminiteArmed && tick >= m_LockedUntilTick && Kit.CanFireLight(tick))
-            {
-                FireLight(tick, item, cursorPx, motor);
             }
 
             if (!Active) return;
@@ -162,19 +154,25 @@ namespace CTG.Gameplay
             IsLuminite = false;
         }
 
-        /// <summary>A light arrow: instant, straight, fast, no knockback, fixed damage.</summary>
-        void FireLight(int tick, ItemDef item, Vector2 cursorPx, PlayerMotor motor)
+        /// <summary>
+        /// Looses a light arrow toward the cursor if the kit allows it (a charge, the fire interval, the switch delay) and
+        /// the bow isn't mid-draw or armed with the Luminite arrow. Instant, straight, fast, no knockback, fixed damage.
+        /// </summary>
+        public bool TryFireLight(int tick, Vector2 cursorPx, PlayerMotor motor)
         {
+            if (Kit == null || IsCharging || Kit.LuminiteArmed || tick < m_LockedUntilTick || !Kit.CanFireLight(tick)) return false;
+
             ProjectileSystem projectiles = ProjectileSystem.Instance;
-            if (projectiles == null) return;
+            if (projectiles == null) return false;
 
             ArcherStats stats = Kit.Stats;
             Vector2 aim = cursorPx - motor.Center;
             Vector2 direction = aim.sqrMagnitude < 0.0001f ? new Vector2(motor.Direction, 0f) : aim.normalized;
             projectiles.Spawn(ProjectileId.LightArrow, m_Owner, motor.Center + direction * stats.LightSpawnOffsetPx,
-                              direction * stats.LightSpeed, stats.LightDamage, 0f, 0);
+                              direction * stats.LightSpeed, Mathf.RoundToInt(stats.LightDamage * DamageMultiplier), 0f, 0);
             Kit.OnLightFired(tick);
             LastLightTick = tick;
+            return true;
         }
 
         /// <summary>Tick of the latest light arrow, for animation.</summary>
@@ -210,7 +208,7 @@ namespace CTG.Gameplay
 
             var direction = new Vector2(Mathf.Cos(AimAngle), Mathf.Sin(AimAngle));
             Vector2 velocity = direction * item.ShootSpeed * speedPower * (stats.SpeedMultiplier - speedPenalty);
-            int damage = (int)((item.Damage - damagePenalty) * damagePower);
+            int damage = Mathf.RoundToInt((int)((item.Damage - damagePenalty) * damagePower) * DamageMultiplier);
             Vector2 spawn = motor.Center + direction * stats.SpawnOffsetPx;
 
             projectiles.Spawn(Arrow, m_Owner, spawn, velocity, damage, item.Knockback, extraUpdates);

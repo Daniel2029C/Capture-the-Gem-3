@@ -89,7 +89,7 @@ namespace CTG.UI
                     if (stack.Count > 1) GUI.Label(Inset(rect, 4f), stack.Count.ToString(), m_Count);
                 }
 
-                GUI.Label(new Rect(rect.x + 4f, rect.y + 1f, 20f, 18f), ((i + 1) % 10).ToString(), m_Label);
+                GUI.Label(new Rect(rect.x + 4f, rect.y + 1f, 40f, 18f), Input.KeyBindings.Label(Input.BindAction.Hotbar1 + i), m_Label);
             }
 
             ItemStack held = inventory.Selected;
@@ -100,35 +100,67 @@ namespace CTG.UI
             DrawMana();
             DrawBuffs();
             DrawOverheadBars();
-            DrawPotion();
+            DrawSpells();
+            DrawLevelBar();
             DrawAbilities();
             DrawDummyStats();
             if (ShowDebug) DrawDebug();
         }
 
-        /// <summary>Healing potion icon at the bottom centre: greyed out with the seconds left while cooling down.</summary>
-        void DrawPotion()
+        /// <summary>The two spell slots at the bottom centre: icon, uses left, key and cooldown.</summary>
+        void DrawSpells()
         {
-            HealingPotion potion = m_Player.Potion;
-            // Directly above the hotbar's item name; future ability icons go in this row too.
             const float size = k_PotionSize;
-            var rect = new Rect((Screen.width - size) * 0.5f, HotbarTop - k_NameHeight - 6f - size, size, size);
+            float gap = 8f;
+            float left = (Screen.width - (size * Economy.SpellBook.SlotCount + gap)) * 0.5f;
+            float top = HotbarTop - k_NameHeight - 6f - size;
 
-            DrawRect(rect, new Color(0.1f, 0.15f, 0.35f, 0.75f));
-            DrawRect(Inset(rect, 3f), new Color(0.2f, 0.3f, 0.6f, 0.85f));
-
-            Color previous = GUI.color;
-            GUI.color = potion.Ready ? Color.white : new Color(0.45f, 0.45f, 0.45f, 0.8f);
-            GUI.DrawTexture(Inset(rect, 8f), PlaceholderSprites.Potion().texture, ScaleMode.ScaleToFit);
-            GUI.color = previous;
-
-            GUI.Label(new Rect(rect.x + 4f, rect.y + 1f, 20f, 18f), "H", m_Label);
-
-            if (!potion.Ready)
+            for (int slot = 0; slot < Economy.SpellBook.SlotCount; slot++)
             {
-                int seconds = Mathf.CeilToInt(potion.CooldownLeft / (float)Core.SimUnits.TicksPerSecond);
-                GUI.Label(rect, seconds.ToString(), m_Big2);
+                var rect = new Rect(left + slot * (size + gap), top, size, size);
+                DrawRect(rect, new Color(0.1f, 0.15f, 0.35f, 0.75f));
+                DrawRect(Inset(rect, 3f), new Color(0.2f, 0.3f, 0.6f, 0.85f));
+
+                Economy.SpellId? spell = m_Player.Purchases.Spells.SlotSpell(slot);
+                if (spell.HasValue)
+                {
+                    bool ready = m_Player.Purchases.Spells.IsReady(spell.Value);
+                    Color previous = GUI.color;
+                    GUI.color = ready ? Color.white : new Color(0.45f, 0.45f, 0.45f, 0.8f);
+                    if (spell.Value == Economy.SpellId.HealingPotion)
+                    {
+                        GUI.DrawTexture(Inset(rect, 8f), PlaceholderSprites.Potion().texture, ScaleMode.ScaleToFit);
+                    }
+                    else
+                    {
+                        DrawRect(Inset(rect, 14f), new Color(0.95f, 0.8f, 0.3f, 1f));
+                    }
+
+                    GUI.color = previous;
+                    GUI.Label(Inset(rect, 4f), m_Player.Purchases.Spells.Uses(slot).ToString(), m_Count);
+                    if (!ready)
+                    {
+                        int seconds = Mathf.CeilToInt(m_Player.Purchases.Spells.Cooldown(spell.Value) / (float)Core.SimUnits.TicksPerSecond);
+                        GUI.Label(rect, seconds.ToString(), m_Big2);
+                    }
+                }
+
+                GUI.Label(new Rect(rect.x + 4f, rect.y + 1f, size, 18f), Input.KeyBindings.Label(Input.BindAction.Spell1 + slot), m_Label);
             }
+        }
+
+        /// <summary>Level, experience and shards along the bottom edge of the screen.</summary>
+        void DrawLevelBar()
+        {
+            Economy.PlayerProgress progress = m_Player.Progress;
+            const float height = 16f;
+            var bar = new Rect(0f, Screen.height - height, Screen.width, height);
+            DrawRect(bar, new Color(0f, 0f, 0f, 0.7f));
+            float fill = progress.ExpIntoLevel / (float)Economy.PlayerProgress.ExpPerLevel;
+            DrawRect(new Rect(bar.x, bar.y + 2f, bar.width * Mathf.Clamp01(fill), bar.height - 4f), new Color(0.55f, 0.35f, 0.95f, 0.95f));
+
+            string exp = progress.AtMaxLevel ? "MAX" : $"{progress.ExpIntoLevel} / {Economy.PlayerProgress.ExpPerLevel} xp";
+            GUI.Label(new Rect(8f, bar.y - 24f, 400f, 22f), $"Level {progress.Level}   {exp}   Shards {progress.Shards}", m_Label);
         }
 
         /// <summary>Ability slots in a row to the right of the potion: key, name, status and a fill bar.</summary>
@@ -294,7 +326,9 @@ namespace CTG.UI
                 $"vel {motor.Velocity.x:0.00}, {motor.Velocity.y:0.00} px/tick   grounded {motor.Grounded}\n" +
                 $"tile {Mathf.FloorToInt(motor.Position.x / 16f)}, {Mathf.FloorToInt(motor.Position.y / 16f)}   " +
                 $"cursor {m_Player.CursorTile.x}, {m_Player.CursorTile.y}\n" +
-                "A/D move · Space jump/unhook · LMB use · RMB alt use / hook · Shift/E/C abilities · 1-0 / wheel hotbar · H potion · K end match (dev)";
+                $"{Input.KeyBindings.Label(Input.BindAction.MoveLeft)}/{Input.KeyBindings.Label(Input.BindAction.MoveRight)} move · {Input.KeyBindings.Label(Input.BindAction.Jump)} jump/unhook · " +
+                $"{Input.KeyBindings.Label(Input.BindAction.Ability1)}/{Input.KeyBindings.Label(Input.BindAction.Ability2)}/{Input.KeyBindings.Label(Input.BindAction.Ability3)} abilities · " +
+                $"{Input.KeyBindings.Label(Input.BindAction.Spell1)}/{Input.KeyBindings.Label(Input.BindAction.Spell2)} spells · {Input.KeyBindings.Label(Input.BindAction.Shop)} shop (at base) · Esc menu / keybinds · wheel hotbar";
             GUI.Label(new Rect(k_Margin, k_Margin, 700f, 66f), text, m_Label);
         }
 

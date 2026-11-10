@@ -39,6 +39,9 @@ namespace CTG.Gameplay
         /// <summary>Facing locked for the current use: +1 right, -1 left.</summary>
         public int UseDirection { get; private set; } = 1;
 
+        /// <summary>Damage multiplier for every weapon except the pickaxe (level and artifacts).</summary>
+        public float WeaponDamageMultiplier = 1f;
+
         /// <summary>Pickaxe speed from the class: use time and animation are divided by this. 1 = normal.</summary>
         public float MiningSpeedMultiplier = 1f;
 
@@ -76,6 +79,7 @@ namespace CTG.Gameplay
 
             ItemStack held = m_Inventory.Selected;
             ItemDef def = held.Def;
+            Bow.DamageMultiplier = WeaponDamageMultiplier;
 
             // Switched away mid-use: end the use but keep the action cooldowns running.
             if ((ItemAnimation > 0 || Bow.Active) && held.Id != UsingItem) CutShortBySwitch(tick);
@@ -139,6 +143,8 @@ namespace CTG.Gameplay
             }
         }
 
+        int ScaledDamage(int damage) => Mathf.RoundToInt(damage * WeaponDamageMultiplier);
+
         int ScaledByMining(int ticks) => Mathf.Max(1, Mathf.RoundToInt(ticks / Mathf.Max(0.1f, MiningSpeedMultiplier)));
 
         /// <summary>Ends the use in progress because another item was selected, leaving every cooldown as it was.</summary>
@@ -159,7 +165,7 @@ namespace CTG.Gameplay
 
             Vector2 aim = cursorPx - motor.Center;
             Vector2 direction = aim.sqrMagnitude < 0.0001f ? new Vector2(UseDirection, 0f) : aim.normalized;
-            projectiles.Spawn(def.Projectile, m_Owner, motor.Center, direction * def.ShootSpeed, def.Damage, def.Knockback, 0);
+            projectiles.Spawn(def.Projectile, m_Owner, motor.Center, direction * def.ShootSpeed, ScaledDamage(def.Damage), def.Knockback, 0);
         }
 
         void TickMelee(PlayerMotor motor)
@@ -182,7 +188,7 @@ namespace CTG.Gameplay
                 m_HitThisUse.Add(target);
                 target.ApplyHit(new HitInfo
                 {
-                    Damage = def.Damage, Knockback = def.Knockback, Direction = UseDirection, Source = m_Owner,
+                    Damage = def.IsPickaxe ? def.Damage : ScaledDamage(def.Damage), Knockback = def.Knockback, Direction = UseDirection, Source = m_Owner,
                 });
             }
         }

@@ -1,6 +1,7 @@
 using CTG.Classes;
 using CTG.Combat;
 using CTG.Core;
+using CTG.Economy;
 using CTG.Input;
 using CTG.Items;
 using CTG.Rendering;
@@ -40,13 +41,6 @@ namespace CTG.Gameplay
         [Tooltip("Maximum mana comes from the class; 0 means no mana.")]
         [SerializeField] float manaRegenPerSecond = 1f;
 
-        [Header("Healing potion")]
-        [SerializeField] int potionHeal = 50;
-        [Tooltip("Seconds before the potion can be used again.")]
-        [SerializeField] float potionCooldownSeconds = 60f;
-        [Tooltip("Allow drinking at full life (wastes the potion).")]
-        [SerializeField] bool potionUsableAtFullLife;
-
         [Header("Lava")]
         [SerializeField] int lavaDamage = 80;
         [Tooltip("Ticks between lava hits while staying in it.")]
@@ -76,7 +70,16 @@ namespace CTG.Gameplay
         public PlayerMotor Motor { get; private set; }
         public Health Health { get; private set; }
         public Mana Mana { get; private set; }
-        public HealingPotion Potion { get; } = new();
+        /// <summary>Shards, experience and level.</summary>
+        public PlayerProgress Progress { get; } = new();
+        /// <summary>Artifacts and spells bought.</summary>
+        public Purchases Purchases { get; } = new();
+        /// <summary>Multipliers from artifacts, level and active effects, refreshed every tick.</summary>
+        public PlayerModifiers Modifiers { get; private set; }
+        /// <summary>The shop panel is open (only possible at base).</summary>
+        public bool ShopOpen { get; private set; }
+        /// <summary>Ticks left of the Endurance spell's damage reduction.</summary>
+        public int EnduranceTicksLeft { get; private set; }
         /// <summary>The class's grappling hooks (ability 1), or null if it has none.</summary>
         public GrapplingHooks Hooks { get; private set; }
         /// <summary>Abilities 1-3 (default keys Shift, E, C).</summary>
@@ -110,9 +113,10 @@ namespace CTG.Gameplay
             Health = new Health(maxLife, regenPerSecond, hitImmunityTicks,
                                 SimUnits.SecondsToTicks(respawnSeconds));
             Mana = new Mana(0, manaRegenPerSecond);
-            ApplyPotionSettings();
             Inventory = new Inventory();
             ItemUser = new ItemUser(Inventory, tileEditor, this);
+            Progress.LeveledUp += level => CombatText.Spawn(Motor.Center + new Vector2(0f, 56f), $"Level {level}!", CombatText.Healed);
+            Purchases.Reset();
 
             BuildVisuals();
             SimulationClock.Instance.Register(this);
@@ -136,19 +140,10 @@ namespace CTG.Gameplay
                 Health.RespawnTicks = SimUnits.SecondsToTicks(respawnSeconds);
             }
 
-            ApplyPotionSettings();
-
             if (Mana != null)
             {
                 Mana.RegenPerSecond = manaRegenPerSecond;
             }
-        }
-
-        void ApplyPotionSettings()
-        {
-            Potion.HealAmount = potionHeal;
-            Potion.CooldownTicks = SimUnits.SecondsToTicks(potionCooldownSeconds);
-            Potion.UsableAtFullLife = potionUsableAtFullLife;
         }
 
         MovementStats ClassAdjustedMovement()
@@ -175,9 +170,13 @@ namespace CTG.Gameplay
             Defense = def.BonusDefense;
             Motor.Stats = ClassAdjustedMovement();
             Motor.DoubleJump = def.DoubleJump;
+            Motor.FastFall = def.FastFall;
             Hooks?.ReleaseAll();
             Hooks = def.Hook != null ? new GrapplingHooks(def.Hook, m_World) : null;
-            Potion.Reset();
+            Progress.Reset();
+            Purchases.Reset();
+            EnduranceTicksLeft = 0;
+            ShopOpen = false;
 
             bool archerKit = System.Array.Exists(def.Abilities, id => id >= AbilityId.ArcherSprint && id <= AbilityId.ArcherLuminite);
             Archer = archerKit ? new ArcherKit() : null;
@@ -235,7 +234,19 @@ namespace CTG.Gameplay
         public void Tick(int tick)
         {
             InputFrame input = m_Input.Consume();
-            if (InputLocked) input = new InputFrame { CursorWorld = input.CursorWorld, HotbarKey = -1 };
+            if (InputLocked || InputBlock.All) input = new InputFrame { CursorWorld = input.CursorWorld, HotbarKey = -1 };
+            if (ShopOpen || InputBlock.Actions)
+            {
+                // The shop is a menu: clicks and keys don't act in the world, but the player can still move.
+                input.UseItem = false;
+                input.UseAlt = false;
+                input.HookFire = false;
+                input.AbilityPressed = 0;
+                input.AbilityHeld = 0;
+                input.SpellPressed = 0;
+            }
+
+            m_CurrentTick = tick;
             LastInput = input;
             CursorTile = TileWorld.WorldToTile(input.CursorWorld);
 
@@ -245,11 +256,16 @@ namespace CTG.Gameplay
                 return;
             }
 
-            Potion.Tick();
-            if (input.UsePotion)
+            Progress.Tick();
+            Purchases.Spells.Tick();
+            if (EnduranceTicksLeft > 0) EnduranceTicksLeft--;
+            RefreshModifiers();
+
+            if (input.ShopPressed) ShopOpen = !ShopOpen && InBase;
+            if (ShopOpen && !InBase) ShopOpen = false;
+            for (int i = 0; i < SpellBook.SlotCount; i++)
             {
-                int healed = Potion.TryUse(Health);
-                if (healed >= 0) CombatText.Spawn(Motor.Center, $"+{healed}", CombatText.Healed);
+                if ((input.SpellPressed & (1 << i)) != 0) CastSpell(i);
             }
 
             if (ItemUser.CanSwitchItems)
@@ -265,8 +281,9 @@ namespace CTG.Gameplay
             }
 
             // Abilities act before the item so a mode change applies to this tick's shot.
-            Archer?.Tick();
-            Abilities.Tick(new AbilityContext(this, tick), input.AbilityPressed, input.AbilityHeld);
+            float cooldownRate = 1f / Modifiers.AbilityCooldownScale;
+            Archer?.Tick(cooldownRate);
+            Abilities.Tick(new AbilityContext(this, tick, cooldownRate), input.AbilityPressed, input.AbilityHeld);
             Motor.RunSpeedScale = Abilities.RunSpeedScale * (ItemUser.Bow.IsChargingLuminite && Archer != null ? Archer.Stats.LuminiteDrawRunScale : 1f);
             Motor.RunAccelerationScale = Abilities.RunAccelerationScale;
 
@@ -302,9 +319,61 @@ namespace CTG.Gameplay
             if (ItemUser.Bow.Active) Motor.Direction = ItemUser.UseDirection;
 
             HandleDevInput(input, cursorPx);
+            Health.RegenPerSecond = regenPerSecond + Modifiers.RegenBonusPerSecond;
             Health.ZoneRegenPerSecond = HomeRoomPx.HasValue && HomeRoomPx.Value.Contains(Motor.Center) ? spawnRoomRegenPerSecond : 0f;
             Health.Tick();
             if (!Health.IsDead) Mana.Tick();
+        }
+
+        const int k_HealingPotionAmount = 50;
+        static readonly int k_SpellCooldownTicks = SimUnits.SecondsToTicks(60f);
+        static readonly int k_EnduranceTicks = SimUnits.SecondsToTicks(5f);
+
+        /// <summary>True inside the player's own spawn room (or anywhere on maps without one).</summary>
+        public bool InBase => !HomeRoomPx.HasValue || HomeRoomPx.Value.Contains(Motor.Center);
+
+        public void CloseShop() => ShopOpen = false;
+
+        /// <summary>Recomputes the artifact, level and effect multipliers and applies the ones that live on other objects.</summary>
+        void RefreshModifiers()
+        {
+            Modifiers = PlayerModifiers.Compute(Purchases, Progress, EnduranceTicksLeft > 0);
+            ItemUser.WeaponDamageMultiplier = Modifiers.WeaponDamageMultiplier;
+            ItemUser.MiningSpeedMultiplier = (Class != null ? Class.MiningSpeedMultiplier : 1f) * Modifiers.MiningSpeedMultiplier;
+
+            // Life scales with level; gaining max life also gives that much life now.
+            int baseLife = Class != null ? Class.MaxLife : maxLife;
+            int scaledLife = Mathf.RoundToInt(baseLife * Modifiers.LifeMultiplier);
+            if (scaledLife != Health.Max)
+            {
+                int gained = scaledLife - Health.Max;
+                Health.Max = scaledLife;
+                if (gained > 0 && !Health.IsDead) Health.Heal(gained);
+                else if (Health.Current > scaledLife) Health.Heal(0);
+            }
+        }
+
+        void CastSpell(int slot)
+        {
+            SpellId? spell = Purchases.Spells.SlotSpell(slot);
+            if (!spell.HasValue) return;
+
+            // Drinking at full life would waste the potion, so it does nothing.
+            if (spell.Value == SpellId.HealingPotion && Health.Current >= Health.Max) return;
+
+            int cooldown = Mathf.RoundToInt(k_SpellCooldownTicks * Modifiers.SpellCooldownScale);
+            if (!Purchases.Spells.TryConsume(slot, cooldown, out SpellId cast)) return;
+
+            if (cast == SpellId.HealingPotion)
+            {
+                int healed = Health.Heal(k_HealingPotionAmount);
+                CombatText.Spawn(Motor.Center, $"+{healed}", CombatText.Healed);
+            }
+            else
+            {
+                EnduranceTicksLeft = k_EnduranceTicks;
+                CombatText.Spawn(Motor.Center, "Endurance", CombatText.Healed);
+            }
         }
 
         /// <summary>Kicks up a few dirt chips from the tile underfoot while running on dirt.</summary>
@@ -327,8 +396,12 @@ namespace CTG.Gameplay
             if (!CanBeHit) return 0;
 
             int damage = CombatRules.ComputeDamage(hit.Damage, Defense);
+            if (Modifiers.DamageReduction > 0f) damage = Mathf.Max(1, Mathf.RoundToInt(damage * (1f - Modifiers.DamageReduction)));
             int dealt = Health.TakeDamage(damage);
             if (dealt <= 0) return 0;
+
+            var attacker = hit.Source as PlayerCharacter;
+            if (attacker != null && attacker != this && attacker.Team != Team) m_Attackers[attacker] = m_CurrentTick;
 
             // Being hit by a projectile shakes off hooks that have latched or turned back.
             if (hit.FromProjectile) Hooks?.ReleaseAttached();
@@ -337,6 +410,7 @@ namespace CTG.Gameplay
 
             if (Health.IsDead)
             {
+                CreditKill(attacker);
                 Die();
             }
             else if (hit.Knockback > 0f)
@@ -345,6 +419,27 @@ namespace CTG.Gameplay
             }
 
             return dealt;
+        }
+
+        readonly System.Collections.Generic.Dictionary<PlayerCharacter, int> m_Attackers = new();
+        int m_CurrentTick;
+
+        /// <summary>Reports a death caused by an enemy player to the economy: the killer, and anyone who damaged us recently.</summary>
+        void CreditKill(PlayerCharacter killer)
+        {
+            if (killer != null && killer != this && killer.Team != Team && MatchEconomy.Instance != null)
+            {
+                int window = SimUnits.SecondsToTicks(EconomyRules.AssistWindowSeconds);
+                var assisters = new System.Collections.Generic.List<PlayerCharacter>();
+                foreach (var entry in m_Attackers)
+                {
+                    if (entry.Key != killer && m_CurrentTick - entry.Value <= window) assisters.Add(entry.Key);
+                }
+
+                MatchEconomy.Instance.RecordKill(killer, Class, assisters);
+            }
+
+            m_Attackers.Clear();
         }
 
         /// <summary>Testing: raised when the end-match key is pressed (K); the bootstrap hooks it to the match.</summary>
@@ -358,7 +453,6 @@ namespace CTG.Gameplay
         void Die()
         {
             Hooks?.ReleaseAll();
-            Potion.Reset();
             ItemUser.Cancel();
             Motor.Velocity = Vector2.zero;
             CombatText.Spawn(Motor.Center + new Vector2(0f, 24f), "You died", CombatText.PlayerDamaged);

@@ -1,6 +1,7 @@
 using CTG.Classes;
 using CTG.Combat;
 using CTG.Core;
+using CTG.Economy;
 using CTG.Gameplay;
 using CTG.Items;
 using CTG.Rendering;
@@ -101,6 +102,10 @@ namespace CTG
                 GemView.Create(transform, gemMatch);
                 MatchHud.Create(transform, gemMatch);
             }
+
+            new MatchEconomy();
+            ShopUi.Create(transform, Player);
+            KeybindMenuUi.Create(transform);
 
             MatchFlow matchFlow = MatchFlow.Create(transform, clock, Player, gemMatch);
             if (gemMatch != null) Player.DevEndMatchRequested += gemMatch.DevEnd;

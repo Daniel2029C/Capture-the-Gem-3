@@ -7,7 +7,7 @@ namespace CTG.Gameplay
     {
         None = 0,
         ArcherSprint,
-        ArcherArrowMode,
+        ArcherLightArrow,
         ArcherLuminite,
     }
 
@@ -16,11 +16,14 @@ namespace CTG.Gameplay
     {
         public readonly PlayerCharacter Player;
         public readonly int Tick;
+        /// <summary>How fast cooldowns and recharges run: 1 normally, above 1 with cooldown reductions.</summary>
+        public readonly float CooldownRate;
 
-        public AbilityContext(PlayerCharacter player, int tick)
+        public AbilityContext(PlayerCharacter player, int tick, float cooldownRate = 1f)
         {
             Player = player;
             Tick = tick;
+            CooldownRate = cooldownRate;
         }
 
         public PlayerMotor Motor => Player.Motor;
@@ -123,7 +126,7 @@ namespace CTG.Gameplay
             switch (id)
             {
                 case AbilityId.ArcherSprint: return new SprintAbility(kit != null ? kit.Stats.Sprint : new SprintStats());
-                case AbilityId.ArcherArrowMode: return kit != null ? new ArrowModeAbility(kit) : null;
+                case AbilityId.ArcherLightArrow: return kit != null ? new LightArrowAbility(kit) : null;
                 case AbilityId.ArcherLuminite: return kit != null ? new LuminiteAbility(kit) : null;
                 default: return null;
             }
