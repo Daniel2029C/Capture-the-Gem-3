@@ -8,6 +8,8 @@ namespace CTG.Combat
     {
         Neutral = 0,
         Red = 1,
+        /// <summary>Hostile creatures (mobs): hostile to every player, never to each other.</summary>
+        Monster = 2,
         Blue = 3,
     }
 
@@ -17,6 +19,7 @@ namespace CTG.Combat
         {
             Team.Red => new Color32(225, 55, 55, 255),
             Team.Blue => new Color32(60, 110, 255, 255),
+            Team.Monster => new Color32(160, 80, 200, 255),
             _ => new Color32(70, 70, 80, 255),
         };
     }
@@ -61,6 +64,7 @@ namespace CTG.Combat
         public static bool AreHostile(IDamageable a, IDamageable b)
         {
             if (a == b) return false;
+            if (a.Team == Team.Monster && b.Team == Team.Monster) return false;
             if (a.Team == Team.Neutral || b.Team == Team.Neutral) return true;
             return a.Team != b.Team;
         }

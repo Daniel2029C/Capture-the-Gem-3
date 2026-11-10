@@ -17,6 +17,8 @@ namespace CTG.Gameplay
         public Team Team { get; }
         /// <summary>The pedestal hitbox, world px.</summary>
         public Rect HitboxPx { get; }
+        /// <summary>The shield that must be broken before this gem can be picked up.</summary>
+        public GemBarrier Barrier { get; set; }
         public bool IsHeld { get; set; }
         public PlayerCharacter Holder { get; set; }
         /// <summary>Set when the carrier reaches the owner's gem; the match consumes it and resets the gem.</summary>

@@ -368,6 +368,13 @@ namespace CTG.Combat
                     continue;
                 }
 
+                if (p.Def.Round)
+                {
+                    view.sprite = PlaceholderSprites.Solid($"blob_{p.Def.Id}", p.Def.Color, p.Def.WidthPx, p.Def.HeightPx);
+                    view.transform.rotation = Quaternion.identity;
+                    continue;
+                }
+
                 view.sprite = PlaceholderSprites.Arrow(p.Def.Color);
                 float angle = Mathf.Atan2(p.Velocity.y, p.Velocity.x) * Mathf.Rad2Deg;
                 view.transform.rotation = Quaternion.Euler(0f, 0f, angle);

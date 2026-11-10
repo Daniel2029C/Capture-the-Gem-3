@@ -75,8 +75,11 @@ namespace CTG.Economy
         public const float DivineDamageReduction = 0.1f;
         public const float DivineSpellCooldownReduction = 0.1f;
         public const float EnduranceDamageReduction = 0.1f;
+        /// <summary>The mid-boss buff: more weapon damage and less damage taken.</summary>
+        public const float ApexDamageBonus = 0.15f;
+        public const float ApexDamageReduction = 0.15f;
 
-        public static PlayerModifiers Compute(Purchases purchases, PlayerProgress progress, bool enduranceActive)
+        public static PlayerModifiers Compute(Purchases purchases, PlayerProgress progress, bool enduranceActive, bool apexBuffActive = false)
         {
             float level = progress.LevelScale;
             var m = new PlayerModifiers
@@ -104,6 +107,12 @@ namespace CTG.Economy
             }
 
             if (enduranceActive) m.DamageReduction += EnduranceDamageReduction;
+            if (apexBuffActive)
+            {
+                m.WeaponDamageMultiplier *= 1f + ApexDamageBonus;
+                m.DamageReduction += ApexDamageReduction;
+            }
+
             return m;
         }
     }

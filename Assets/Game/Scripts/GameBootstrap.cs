@@ -4,6 +4,7 @@ using CTG.Core;
 using CTG.Economy;
 using CTG.Gameplay;
 using CTG.Items;
+using CTG.Mobs;
 using CTG.Rendering;
 using CTG.UI;
 using CTG.World;
@@ -104,11 +105,21 @@ namespace CTG
             }
 
             new MatchEconomy();
+            if (gemMatch != null)
+            {
+                BarrierView.Create(transform, gemMatch);
+                CreateObjectivePieces(gemMatch);
+            }
+
             ShopUi.Create(transform, Player);
             KeybindMenuUi.Create(transform);
 
             MatchFlow matchFlow = MatchFlow.Create(transform, clock, Player, gemMatch);
-            if (gemMatch != null) Player.DevEndMatchRequested += gemMatch.DevEnd;
+            if (gemMatch != null)
+            {
+                Player.DevEndMatchRequested += gemMatch.DevEnd;
+                Player.DevSkipOvertimeRequested += gemMatch.DevSkipToOvertime;
+            }
             MatchFlowHud.Create(transform, matchFlow);
 
             // Registered after the player so projectiles fired this tick also move this tick.
@@ -158,6 +169,21 @@ namespace CTG
         }
 
         /// <summary>Hitbox bottom-left, centred on a tile column and standing on top of the given tile row.</summary>
+        /// <summary>Altars (base and mid) and the Drakon spawns, placed from the map layout.</summary>
+        void CreateObjectivePieces(GemMatch gemMatch)
+        {
+            AltarAt(AltarKind.Base, Team.Blue, MapLayout.BaseAltarTile(Map, Team.Blue));
+            AltarAt(AltarKind.Base, Team.Red, MapLayout.BaseAltarTile(Map, Team.Red));
+            AltarAt(AltarKind.Mid, Team.Neutral, MapLayout.MidAltarTile(Map));
+            MobDirector.Create(transform, Map, gemMatch);
+        }
+
+        void AltarAt(AltarKind kind, Team owner, Vector2Int floorTile)
+        {
+            // Stands on top of the floor tile, centred on it.
+            Altar.Create(transform, kind, owner, new Vector2((floorTile.x + 0.5f) * SimUnits.PixelsPerTile, (floorTile.y + 1) * SimUnits.PixelsPerTile));
+        }
+
         static Vector2 StandPosition(int column, int standRow, float hitboxWidthPx) => new(
             (column + 0.5f) * SimUnits.PixelsPerTile - hitboxWidthPx * 0.5f,
             (standRow + 1) * SimUnits.PixelsPerTile);

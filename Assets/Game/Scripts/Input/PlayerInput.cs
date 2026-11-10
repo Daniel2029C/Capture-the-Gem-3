@@ -32,6 +32,8 @@ namespace CTG.Input
         public Vector2 CursorWorld;
         /// <summary>Testing: end the match immediately.</summary>
         public bool DevEndMatch;
+        /// <summary>Testing: jump the match clock to the 10:00 shift.</summary>
+        public bool DevSkipOvertime;
     }
 
     /// <summary>
@@ -42,7 +44,7 @@ namespace CTG.Input
     public class PlayerInput : MonoBehaviour
     {
         [SerializeField] Camera worldCamera;
-        [Tooltip("Enables testing keys (end the match now).")]
+        [Tooltip("Enables testing keys (end the match now, skip to overtime).")]
         [SerializeField] bool devKeys = true;
 
         uint m_Latched;
@@ -56,7 +58,7 @@ namespace CTG.Input
         {
             foreach (BindAction action in KeyBindings.Actions)
             {
-                if (action == BindAction.DevEndMatch && !devKeys) continue;
+                if ((action == BindAction.DevEndMatch || action == BindAction.DevSkipOvertime) && !devKeys) continue;
                 if (KeyBindings.WasPressedThisFrame(action)) m_Latched |= Bit(action);
             }
 
@@ -82,6 +84,7 @@ namespace CTG.Input
                 HookFire = Pressed(BindAction.Hook),
                 ShopPressed = Pressed(BindAction.Shop),
                 DevEndMatch = Pressed(BindAction.DevEndMatch),
+                DevSkipOvertime = Pressed(BindAction.DevSkipOvertime),
                 HotbarKey = -1,
             };
 

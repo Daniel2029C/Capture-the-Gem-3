@@ -11,7 +11,7 @@ namespace CTG.World
     // legend         : glyph -> tile type name ("Air", "BlueDirt", "RedDirt", "BlueBrick", "RedBrick", "Ward").
     // tiles          : `height` strings of `width` glyphs, top row first.
     // liquids        : same layout, the liquids: '~' lava, 'n' nectar, '.' none. May be empty.
-    // zones          : optional rectangles (x, y from the top row, w, h): SpawnBlue / SpawnRed rooms, BlueGem / RedGem hitboxes, NoBuild areas.
+    // zones          : optional rectangles (x, y from the top row, w, h): SpawnBlue / SpawnRed rooms, BlueGem / RedGem hitboxes, NoBuild areas, and optionally MobSpawnBlue / MobSpawnRed, AltarBlue / AltarRed / AltarMid.
     // shapes         : sparse list of non-full tiles: x, y (y counted from the top row) and a TileShape name.
 
     [Serializable]
@@ -29,7 +29,7 @@ namespace CTG.World
         public string shape;
     }
 
-    /// <summary>A rectangle of the arena (x, y from the top-left, in tiles) with a purpose: "SpawnBlue", "SpawnRed", "BlueGem", "RedGem" or "NoBuild".</summary>
+    /// <summary>A rectangle of the arena (x, y from the top-left, in tiles) with a purpose: "SpawnBlue", "SpawnRed", "BlueGem", "RedGem", "NoBuild", "MobSpawnBlue", "MobSpawnRed", "AltarBlue", "AltarRed", "AltarMid" or "BossMid".</summary>
     [Serializable]
     public class MapZone
     {
@@ -69,6 +69,15 @@ namespace CTG.World
         /// <summary>Each team's gem hitbox (6×9 tiles) in world tiles (x, y = bottom-left), or null.</summary>
         public RectInt? BlueGem;
         public RectInt? RedGem;
+        /// <summary>Optional areas where each side's mob spawns, in world tiles. Without them the layout is derived from the gems.</summary>
+        public RectInt? BlueMobSpawn;
+        public RectInt? RedMobSpawn;
+        /// <summary>Optional altar spots (x, y = bottom-left; the altar stands at the bottom centre). Without them they are derived.</summary>
+        public RectInt? BlueAltar;
+        public RectInt? RedAltar;
+        public RectInt? MidAltar;
+        /// <summary>Optional spot for the mid-boss (x, y = bottom-left; it stands on the bottom centre). Without it the layout is derived.</summary>
+        public RectInt? BossSpot;
 
         /// <summary>Tile x of the arena's centre column.</summary>
         public int CenterX => Border + ArenaWidth / 2;
@@ -169,6 +178,12 @@ namespace CTG.World
                         case "SpawnRed": map.RedSpawn = rect; break;
                         case "BlueGem": map.BlueGem = rect; break;
                         case "RedGem": map.RedGem = rect; break;
+                        case "MobSpawnBlue": map.BlueMobSpawn = rect; break;
+                        case "MobSpawnRed": map.RedMobSpawn = rect; break;
+                        case "AltarBlue": map.BlueAltar = rect; break;
+                        case "AltarRed": map.RedAltar = rect; break;
+                        case "AltarMid": map.MidAltar = rect; break;
+                        case "BossMid": map.BossSpot = rect; break;
                         case "NoBuild": world.SetNoBuild(rect.x, rect.y, rect.width, rect.height); break;
                         default: throw new InvalidOperationException($"Map '{file.name}': unknown zone '{zone.kind}'.");
                     }

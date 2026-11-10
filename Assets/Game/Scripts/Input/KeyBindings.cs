@@ -23,6 +23,7 @@ namespace CTG.Input
         Shop,
         Hotbar1, Hotbar2, Hotbar3, Hotbar4, Hotbar5, Hotbar6, Hotbar7, Hotbar8, Hotbar9, Hotbar10,
         DevEndMatch,
+        DevSkipOvertime,
     }
 
     /// <summary>A keyboard key or a mouse button.</summary>
@@ -118,6 +119,7 @@ namespace CTG.Input
             { BindAction.Hotbar9, Binding.OfKey(Key.Digit9) },
             { BindAction.Hotbar10, Binding.OfKey(Key.Digit0) },
             { BindAction.DevEndMatch, Binding.OfKey(Key.K) },
+            { BindAction.DevSkipOvertime, Binding.OfKey(Key.O) },
         };
 
         static readonly Dictionary<BindAction, Binding> s_Current = new();
@@ -143,6 +145,7 @@ namespace CTG.Input
             BindAction.Spell2 => "Spell 2",
             BindAction.Shop => "Shop",
             BindAction.DevEndMatch => "End match (dev)",
+            BindAction.DevSkipOvertime => "Skip to overtime (dev)",
             _ => $"Hotbar {(int)action - (int)BindAction.Hotbar1 + 1}",
         };
 

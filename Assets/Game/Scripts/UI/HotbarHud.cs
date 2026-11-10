@@ -102,6 +102,7 @@ namespace CTG.UI
             DrawOverheadBars();
             DrawSpells();
             DrawLevelBar();
+            DrawChannelBar();
             DrawAbilities();
             DrawDummyStats();
             if (ShowDebug) DrawDebug();
@@ -149,6 +150,26 @@ namespace CTG.UI
             }
         }
 
+        /// <summary>A progress bar above the player while cashing in an offering at an altar.</summary>
+        void DrawChannelBar()
+        {
+            Camera cam = Camera.main;
+            if (cam == null || m_Player.Health.IsDead) return;
+
+            foreach (Economy.Altar altar in Economy.Altar.All)
+            {
+                float progress = altar.ProgressFor(m_Player);
+                if (progress <= 0f) continue;
+
+                Vector3 head = cam.WorldToScreenPoint(m_Player.transform.position + new Vector3(0f, 3.8f, 0f));
+                var rect = new Rect(head.x - 40f, Screen.height - head.y - 6f, 80f, 10f);
+                DrawRect(rect, new Color(0f, 0f, 0f, 0.7f));
+                DrawRect(new Rect(rect.x + 1f, rect.y + 1f, (rect.width - 2f) * progress, rect.height - 2f), new Color(1f, 0.85f, 0.3f, 0.95f));
+                GUI.Label(new Rect(rect.x - 20f, rect.y - 22f, 120f, 20f), "Cashing in...", m_Label);
+                break;
+            }
+        }
+
         /// <summary>Level, experience and shards along the bottom edge of the screen.</summary>
         void DrawLevelBar()
         {
@@ -160,7 +181,7 @@ namespace CTG.UI
             DrawRect(new Rect(bar.x, bar.y + 2f, bar.width * Mathf.Clamp01(fill), bar.height - 4f), new Color(0.55f, 0.35f, 0.95f, 0.95f));
 
             string exp = progress.AtMaxLevel ? "MAX" : $"{progress.ExpIntoLevel} / {Economy.PlayerProgress.ExpPerLevel} xp";
-            GUI.Label(new Rect(8f, bar.y - 24f, 400f, 22f), $"Level {progress.Level}   {exp}   Shards {progress.Shards}", m_Label);
+            GUI.Label(new Rect(8f, bar.y - 24f, 600f, 22f), $"Level {progress.Level}   {exp}   Shards {progress.Shards}   Offerings {m_Player.Offerings}", m_Label);
         }
 
         /// <summary>Ability slots in a row to the right of the potion: key, name, status and a fill bar.</summary>
@@ -221,6 +242,13 @@ namespace CTG.UI
             {
                 int seconds = Mathf.CeilToInt(health.BurnTicksLeft / (float)Core.SimUnits.TicksPerSecond);
                 GUI.Label(new Rect(Screen.width - 260f - k_Margin, top, 260f, 22f), $"On Fire!  {seconds}s", m_Label);
+                top += lineHeight;
+            }
+
+            if (m_Player.ApexBuffTicksLeft > 0)
+            {
+                int seconds = Mathf.CeilToInt(m_Player.ApexBuffTicksLeft / (float)Core.SimUnits.TicksPerSecond);
+                GUI.Label(new Rect(Screen.width - 260f - k_Margin, top, 260f, 22f), $"Apex buff  {seconds / 60}:{seconds % 60:00}", m_Label);
                 top += lineHeight;
             }
 

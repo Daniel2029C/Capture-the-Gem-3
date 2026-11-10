@@ -1,4 +1,6 @@
+using System;
 using CTG.Combat;
+using CTG.Economy;
 using CTG.Core;
 using CTG.World;
 using UnityEngine;
@@ -34,6 +36,11 @@ namespace CTG.Gameplay
         public int MessageTicksLeft { get; private set; }
 
         PlayerCharacter m_Player;
+        bool m_ApexShifted;
+
+        /// <summary>Raised once when regular time ends (10:00): barriers fall, and mobs and offerings go.</summary>
+        public event Action ApexShift;
+        public bool HasApexShifted => m_ApexShifted;
 
         /// <summary>The match clock and objective only run while this is set (the flow sets it when play starts).</summary>
         public bool Running { get; set; }
@@ -51,6 +58,10 @@ namespace CTG.Gameplay
             match.m_Player = player;
             match.BlueGem = new Gem(Team.Blue, ToPx(map.BlueGem.Value));
             match.RedGem = new Gem(Team.Red, ToPx(map.RedGem.Value));
+            match.BlueGem.Barrier = new GemBarrier(match.BlueGem);
+            match.RedGem.Barrier = new GemBarrier(match.RedGem);
+            match.BlueGem.Barrier.Broken += match.OnBarrierBroken;
+            match.RedGem.Barrier.Broken += match.OnBarrierBroken;
             // Registered after the player so this tick's pickups see the player's new position.
             SimulationClock.Instance.Register(match);
             return match;
@@ -58,6 +69,26 @@ namespace CTG.Gameplay
 
         static Rect ToPx(RectInt tiles) => new(tiles.x * SimUnits.PixelsPerTile, tiles.y * SimUnits.PixelsPerTile,
                                                tiles.width * SimUnits.PixelsPerTile, tiles.height * SimUnits.PixelsPerTile);
+
+        void OnDestroy()
+        {
+            BlueGem?.Barrier?.Unregister();
+            RedGem?.Barrier?.Unregister();
+        }
+
+        void OnBarrierBroken(GemBarrier barrier, PlayerCharacter breaker)
+        {
+            string side = barrier.Team == Team.Blue ? "blue" : "red";
+            if (breaker != null)
+            {
+                MatchEconomy.Instance?.AwardBarrierBroken(breaker);
+                Announce($"Player has broken the {side} team's gem barrier!", barrier.Team == Team.Blue ? BlueMessage : RedMessage);
+            }
+            else
+            {
+                Announce($"The {side} team's gem barrier has fallen.", Color.cyan);
+            }
+        }
 
         public Gem GemOf(Team team) => team == Team.Blue ? BlueGem : RedGem;
         public Gem EnemyGemOf(Team team) => team == Team.Blue ? RedGem : BlueGem;
@@ -85,6 +116,14 @@ namespace CTG.Gameplay
             if (!Running || IsOver || m_Player == null || m_Player.Team == Team.Neutral) return;
 
             MatchTicks++;
+            if (!m_ApexShifted && MatchTicks >= RegularTimeTicks)
+            {
+                m_ApexShifted = true;
+                BlueGem.Barrier.BreakByTimer();
+                RedGem.Barrier.BreakByTimer();
+                ApexShift?.Invoke();
+            }
+
             UpdatePlayer(m_Player);
 
             if (BlueGem.IsCaptured)
@@ -125,7 +164,7 @@ namespace CTG.Gameplay
             Color enemyColor = enemy.Team == Team.Red ? RedMessage : BlueMessage;
 
             // Touching the enemy gem picks it up if nobody is carrying it.
-            if (alive && !enemy.IsHeld && body.Overlaps(enemy.HitboxPx))
+            if (alive && !enemy.IsHeld && !enemy.Barrier.IsUp && body.Overlaps(enemy.HitboxPx))
             {
                 enemy.IsHeld = true;
                 enemy.Holder = player;
@@ -152,6 +191,14 @@ namespace CTG.Gameplay
                 Captures++;
                 Announce($"Player has captured the {enemyName} team's gem!", enemyColor);
             }
+        }
+
+        /// <summary>Testing: jumps the clock to just before 10:00, so the Apex Shift (barriers fall, mobs and offerings go, boss spawns) happens next tick.</summary>
+        public void DevSkipToOvertime()
+        {
+            if (!Running || IsOver || m_ApexShifted) return;
+
+            MatchTicks = RegularTimeTicks - 1;
         }
 
         /// <summary>Testing: ends the running match now, in favour of whoever leads on captures (blue on a tie).</summary>

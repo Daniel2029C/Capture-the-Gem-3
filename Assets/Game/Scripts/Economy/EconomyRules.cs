@@ -37,6 +37,12 @@ namespace CTG.Economy
         /// <summary>The first kill of the match, either team: extra for the killer only.</summary>
         public static readonly Reward FirstKillBonus = new(25, 500);
 
+        /// <summary>The last hit on a mob: a small reward on its own, on top of the offering the killer receives.</summary>
+        public static readonly Reward MobLastHit = new(5, 50);
+
+        /// <summary>The last hit on the mid-boss: a reward for the last-hitter alone (the team also gets the buff).</summary>
+        public static readonly Reward BossLastHit = new(100, 1000);
+
         /// <summary>One offering cashed in at an altar.</summary>
         public static Reward Offering(AltarKind altar) => altar == AltarKind.Mid ? new Reward(20, 200) : new Reward(10, 100);
 

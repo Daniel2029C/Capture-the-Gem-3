@@ -66,6 +66,7 @@ namespace CTG.Gameplay
         Transform m_BowPivot;
         SpriteRenderer m_BowSprite;
         SpriteRenderer m_NockedArrow;
+        SpriteRenderer m_OfferingMarker;
 
         public PlayerMotor Motor { get; private set; }
         public Health Health { get; private set; }
@@ -76,8 +77,38 @@ namespace CTG.Gameplay
         public Purchases Purchases { get; } = new();
         /// <summary>Multipliers from artifacts, level and active effects, refreshed every tick.</summary>
         public PlayerModifiers Modifiers { get; private set; }
+        /// <summary>The player this client controls (the first one initialised). Used to decide what this client may see.</summary>
+        public static PlayerCharacter LocalPlayer { get; private set; }
+
+        /// <summary>Whether the local player may see this player's offering orb: their own, and their teammates'.</summary>
+        public bool OfferingVisibleToLocal => LocalPlayer == null || LocalPlayer == this || LocalPlayer.Team == Team;
+
+        /// <summary>Offerings carried: soulbound, lost on death, cashed in at an altar.</summary>
+        public int Offerings { get; private set; }
+        public void GrantOffering() => Offerings++;
+
+        public bool TakeOffering()
+        {
+            if (Offerings <= 0) return false;
+
+            Offerings--;
+            return true;
+        }
+
+        /// <summary>Loses every offering (death, or the Apex Shift wipe).</summary>
+        public void ClearOfferings(bool announce)
+        {
+            if (Offerings > 0 && announce) CombatText.Spawn(Motor.Center + new Vector2(0f, 40f), "Offerings lost", CombatText.PlayerDamaged);
+            Offerings = 0;
+        }
+
         /// <summary>The shop panel is open (only possible at base).</summary>
         public bool ShopOpen { get; private set; }
+        /// <summary>Ticks left of the Apex buff from the mid-boss (+15% damage, 15% damage reduction); lost on death.</summary>
+        public int ApexBuffTicksLeft { get; private set; }
+        public static readonly int ApexBuffTicks = SimUnits.SecondsToTicks(120f);
+        public void GrantApexBuff() => ApexBuffTicksLeft = ApexBuffTicks;
+
         /// <summary>Ticks left of the Endurance spell's damage reduction.</summary>
         public int EnduranceTicksLeft { get; private set; }
         /// <summary>The class's grappling hooks (ability 1), or null if it has none.</summary>
@@ -104,6 +135,7 @@ namespace CTG.Gameplay
 
         public void Initialize(TileWorld world, TileEditor tileEditor, PlayerInput input, Vector2 spawnPx)
         {
+            if (LocalPlayer == null) LocalPlayer = this;
             m_Input = input;
             m_World = world;
             m_SmartCursor = new SmartCursor(world, tileEditor);
@@ -125,6 +157,7 @@ namespace CTG.Gameplay
 
         void OnDestroy()
         {
+            if (LocalPlayer == this) LocalPlayer = null;
             if (SimulationClock.Instance != null) SimulationClock.Instance.Unregister(this);
             DamageableRegistry.Unregister(this);
         }
@@ -175,6 +208,8 @@ namespace CTG.Gameplay
             Hooks = def.Hook != null ? new GrapplingHooks(def.Hook, m_World) : null;
             Progress.Reset();
             Purchases.Reset();
+            Offerings = 0;
+            ApexBuffTicksLeft = 0;
             EnduranceTicksLeft = 0;
             ShopOpen = false;
 
@@ -226,6 +261,14 @@ namespace CTG.Gameplay
             m_NockedArrow.sortingOrder = 13;
             m_NockedArrow.enabled = false;
 
+            // A glowing orb above the head while carrying an offering, so enemies can see who to hunt.
+            m_OfferingMarker = new GameObject("Offering Marker").AddComponent<SpriteRenderer>();
+            m_OfferingMarker.transform.SetParent(transform, false);
+            m_OfferingMarker.transform.localPosition = new Vector3(0f, (k_SpriteHeightPx + 10f) / SimUnits.PixelsPerTile, 0f);
+            m_OfferingMarker.sprite = PlaceholderSprites.Solid("offering_orb", new Color32(255, 215, 90, 255), 8, 8);
+            m_OfferingMarker.sortingOrder = 14;
+            m_OfferingMarker.enabled = false;
+
             var hookView = new GameObject("Grapple Hooks").AddComponent<GrappleHookView>();
             hookView.transform.SetParent(transform, false);
             hookView.Bind(this);
@@ -259,6 +302,7 @@ namespace CTG.Gameplay
             Progress.Tick();
             Purchases.Spells.Tick();
             if (EnduranceTicksLeft > 0) EnduranceTicksLeft--;
+            if (ApexBuffTicksLeft > 0) ApexBuffTicksLeft--;
             RefreshModifiers();
 
             if (input.ShopPressed) ShopOpen = !ShopOpen && InBase;
@@ -337,7 +381,7 @@ namespace CTG.Gameplay
         /// <summary>Recomputes the artifact, level and effect multipliers and applies the ones that live on other objects.</summary>
         void RefreshModifiers()
         {
-            Modifiers = PlayerModifiers.Compute(Purchases, Progress, EnduranceTicksLeft > 0);
+            Modifiers = PlayerModifiers.Compute(Purchases, Progress, EnduranceTicksLeft > 0, ApexBuffTicksLeft > 0);
             ItemUser.WeaponDamageMultiplier = Modifiers.WeaponDamageMultiplier;
             ItemUser.MiningSpeedMultiplier = (Class != null ? Class.MiningSpeedMultiplier : 1f) * Modifiers.MiningSpeedMultiplier;
 
@@ -444,14 +488,19 @@ namespace CTG.Gameplay
 
         /// <summary>Testing: raised when the end-match key is pressed (K); the bootstrap hooks it to the match.</summary>
         public event System.Action DevEndMatchRequested;
+        /// <summary>Testing: raised when the skip-to-overtime key is pressed; the bootstrap hooks it to the match.</summary>
+        public event System.Action DevSkipOvertimeRequested;
 
         void HandleDevInput(InputFrame input, Vector2 cursorPx)
         {
             if (input.DevEndMatch) DevEndMatchRequested?.Invoke();
+            if (input.DevSkipOvertime) DevSkipOvertimeRequested?.Invoke();
         }
 
         void Die()
         {
+            ClearOfferings(true);
+            ApexBuffTicksLeft = 0;
             Hooks?.ReleaseAll();
             ItemUser.Cancel();
             Motor.Velocity = Vector2.zero;
@@ -545,6 +594,13 @@ namespace CTG.Gameplay
 
             UpdateHeldItem(alpha, alive);
             UpdateBow(alive);
+            // Enemies can't see the orb: only the carrier and their team can.
+            m_OfferingMarker.enabled = alive && Offerings > 0 && OfferingVisibleToLocal;
+            if (m_OfferingMarker.enabled)
+            {
+                float pulse = 1f + 0.2f * Mathf.Sin(Time.time * 6f);
+                m_OfferingMarker.transform.localScale = Vector3.one * pulse * (1f + 0.25f * (Mathf.Min(Offerings, 4) - 1));
+            }
         }
 
         void UpdateBow(bool alive)

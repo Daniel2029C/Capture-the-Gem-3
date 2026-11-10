@@ -41,6 +41,28 @@ namespace CTG.Economy
             }
         }
 
+        /// <summary>The player who lands the last hit on a mob: a small reward and an offering to carry to an altar.</summary>
+        public void AwardMobKill(PlayerCharacter killer)
+        {
+            if (killer == null) return;
+
+            Give(killer, EconomyRules.MobLastHit, "Drakon");
+            killer.GrantOffering();
+        }
+
+        /// <summary>The mid-boss dies: the last-hitter is rewarded and their whole team gets the Apex buff.</summary>
+        public void AwardBossKill(PlayerCharacter killer)
+        {
+            if (killer == null) return;
+
+            Give(killer, EconomyRules.BossLastHit, "Boss");
+            var all = Combat.DamageableRegistry.All;
+            for (int i = 0; i < all.Count; i++)
+            {
+                if (all[i] is PlayerCharacter player && player.Team == killer.Team) player.GrantApexBuff();
+            }
+        }
+
         public void AwardOffering(PlayerCharacter player, AltarKind altar) =>
             Give(player, EconomyRules.Offering(altar), altar == AltarKind.Mid ? "Mid offering" : "Offering");
 

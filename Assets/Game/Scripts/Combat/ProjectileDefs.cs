@@ -17,6 +17,8 @@ namespace CTG.Combat
         LuminiteArrow = 5,
         /// <summary>Second shot of a Luminite arrow: launched from the original firing spot once the first arrow ends.</summary>
         LuminiteFollowUp = 6,
+        /// <summary>A Drakon's fireball: slow, straight, ends on the first thing it hits.</summary>
+        Fireball = 7,
     }
 
     /// <summary>
@@ -61,6 +63,8 @@ namespace CTG.Combat
         public float MaxRiseSpeed = float.PositiveInfinity;
         /// <summary>Hitting a target ends the projectile within the same update (so it explodes on contact).</summary>
         public bool EndsOnHit;
+        /// <summary>Drawn as a round blob instead of an arrow.</summary>
+        public bool Round;
         /// <summary>Side of the square blast that hits everything around it when the projectile ends. 0 = none.</summary>
         public int ExplosionSizePx;
         public Color Color = Color.white;
@@ -142,8 +146,18 @@ namespace CTG.Combat
             Color = new Color32(150, 255, 225, 255),
         };
 
+        // Fireball: 12×12, hits one target, flies straight and expires after 200 updates (about 55 tiles at 4.5 px/update).
+        static readonly ProjectileDef s_Fireball = new()
+        {
+            Id = ProjectileId.Fireball, Name = "Fireball",
+            WidthPx = 12, HeightPx = 12, LifetimeUpdates = 200, Penetrate = 1, EndsOnHit = true, Round = true,
+            GravityDelayUpdates = 100000, GravityPerUpdate = 0f,
+            Color = new Color32(255, 120, 30, 255),
+        };
+
         public static ProjectileDef Get(ProjectileId id) => id switch
         {
+            ProjectileId.Fireball => s_Fireball,
             ProjectileId.LightArrow => s_Light,
             ProjectileId.LuminiteArrow => s_Luminite,
             ProjectileId.LuminiteFollowUp => s_LuminiteFollowUp,
