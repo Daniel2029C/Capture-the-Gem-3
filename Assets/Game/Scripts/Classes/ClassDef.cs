@@ -38,8 +38,6 @@ namespace CTG.Classes
         public ClassId Id;
         public string Name;
         public string Description;
-        /// <summary>A frontline class (worth less for killing). The Tree is one; the Archer is not.</summary>
-        public bool IsFrontline;
 
         public int MaxLife = 100;
         /// <summary>0 = the class has no mana (and no mana bar).</summary>
@@ -75,7 +73,7 @@ namespace CTG.Classes
         // CTG2 loadout (potions, armor, accessories, dyes) is left out until those items exist.
         static readonly ClassDef s_Archer = new()
         {
-            Id = ClassId.Archer, Name = "Archer", Description = "Charge bow: Ember, Gleam, Light and Luminite arrows.",
+            Id = ClassId.Archer, Name = "Archer", Description = "",
             MaxLife = 140, MaxMana = 0,
             DoubleJump = new DoubleJumpStats(),
             FastFall = true,
@@ -91,9 +89,8 @@ namespace CTG.Classes
         // blocks every class gets). Its ability 1 is the Foliage Tendrils hook.
         static readonly ClassDef s_Tree = new()
         {
-            Id = ClassId.Tree, Name = "Tree", Description = "Foliage Tendrils: up to 4 grappling hooks.",
+            Id = ClassId.Tree, Name = "Tree", Description = "",
             MaxLife = 150, MaxMana = 0,
-            IsFrontline = true,
             MiningSpeedMultiplier = 7f / 6f,
             Hook = new GrappleStats(),
             Loadout = new[]

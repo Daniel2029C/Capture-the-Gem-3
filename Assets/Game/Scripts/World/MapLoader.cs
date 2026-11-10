@@ -29,7 +29,7 @@ namespace CTG.World
         public string shape;
     }
 
-    /// <summary>A rectangle of the arena (x, y from the top-left, in tiles) with a purpose: "SpawnBlue", "SpawnRed", "BlueGem", "RedGem", "NoBuild", "MobSpawnBlue", "MobSpawnRed", "AltarBlue", "AltarRed", "AltarMid" or "BossMid".</summary>
+    /// <summary>A rectangle of the arena (x, y from the top-left, in tiles) with a purpose: "SpawnBlue", "SpawnRed", "BlueGem", "RedGem", "NoBuild", "MobSpawnBlue", "MobSpawnRed", "MobMidBlue", "MobMidRed", "AltarBlue", "AltarRed", "AltarMid" or "BossMid".</summary>
     [Serializable]
     public class MapZone
     {
@@ -72,6 +72,9 @@ namespace CTG.World
         /// <summary>Optional areas where each side's mob spawns, in world tiles. Without them the layout is derived from the gems.</summary>
         public RectInt? BlueMobSpawn;
         public RectInt? RedMobSpawn;
+        /// <summary>Optional areas inside mid where each side's mid Drakon spawns, in world tiles. Without them they are derived from the centre.</summary>
+        public RectInt? BlueMidMobSpawn;
+        public RectInt? RedMidMobSpawn;
         /// <summary>Optional altar spots (x, y = bottom-left; the altar stands at the bottom centre). Without them they are derived.</summary>
         public RectInt? BlueAltar;
         public RectInt? RedAltar;
@@ -180,6 +183,8 @@ namespace CTG.World
                         case "RedGem": map.RedGem = rect; break;
                         case "MobSpawnBlue": map.BlueMobSpawn = rect; break;
                         case "MobSpawnRed": map.RedMobSpawn = rect; break;
+                        case "MobMidBlue": map.BlueMidMobSpawn = rect; break;
+                        case "MobMidRed": map.RedMidMobSpawn = rect; break;
                         case "AltarBlue": map.BlueAltar = rect; break;
                         case "AltarRed": map.RedAltar = rect; break;
                         case "AltarMid": map.MidAltar = rect; break;

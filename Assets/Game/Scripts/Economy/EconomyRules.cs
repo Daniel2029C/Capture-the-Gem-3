@@ -27,12 +27,30 @@ namespace CTG.Economy
         /// <summary>Seconds after damaging an enemy during which a death counts as an assist for the damager.</summary>
         public const float AssistWindowSeconds = 10f;
 
-        /// <summary>Killing a non-frontline player (the Archer): 50 shards and 500 exp; an assist is 125 exp.</summary>
-        public static Reward Kill(bool victimIsFrontline, bool assist)
+        /// <summary>Shards for a kill before any bounty or penalty.</summary>
+        public const int BaseKillShards = 30;
+        /// <summary>Extra shards per kill the victim has made since they last died (their kill streak).</summary>
+        public const int BountyPerStreakKill = 10;
+        /// <summary>The streak stops adding bounty after this many kills (so the bounty tops out at +50).</summary>
+        public const int MaxBountyStreak = 5;
+        /// <summary>Shards removed for each death the victim has had since their last kill, so a player who keeps dying is never worth more.</summary>
+        public const int DeathPenaltyPerDeath = 1;
+        public const int MaxDeathPenalty = 5;
+        /// <summary>Experience is flat: only shards scale with the bounty.</summary>
+        public const int KillExp = 500;
+        public const int AssistExp = 125;
+
+        /// <summary>Shards for killing a player with this many kills since their last death and this many deaths since their last kill.</summary>
+        public static int KillShards(int victimKillStreak, int victimDeathStreak)
         {
-            if (victimIsFrontline) return assist ? new Reward(0, 75) : new Reward(25, 250);
-            return assist ? new Reward(0, 125) : new Reward(50, 500);
+            int bounty = BountyPerStreakKill * System.Math.Min(System.Math.Max(victimKillStreak, 0), MaxBountyStreak);
+            int penalty = System.Math.Min(System.Math.Max(victimDeathStreak, 0) * DeathPenaltyPerDeath, MaxDeathPenalty);
+            return BaseKillShards + bounty - penalty;
         }
+
+        /// <summary>The reward for killing (or assisting a kill on) a victim in this state. Assists give exp only.</summary>
+        public static Reward Kill(int victimKillStreak, int victimDeathStreak, bool assist) =>
+            assist ? new Reward(0, AssistExp) : new Reward(KillShards(victimKillStreak, victimDeathStreak), KillExp);
 
         /// <summary>The first kill of the match, either team: extra for the killer only.</summary>
         public static readonly Reward FirstKillBonus = new(25, 500);

@@ -83,6 +83,19 @@ namespace CTG.Gameplay
         /// <summary>Whether the local player may see this player's offering orb: their own, and their teammates'.</summary>
         public bool OfferingVisibleToLocal => LocalPlayer == null || LocalPlayer == this || LocalPlayer.Team == Team;
 
+        /// <summary>Match statistics, shown on the scoreboard.</summary>
+        public int Kills { get; private set; }
+        public int Deaths { get; private set; }
+        public int Assists { get; private set; }
+        /// <summary>Kills since this player last died; raises their bounty.</summary>
+        public int KillStreak { get; private set; }
+        /// <summary>The shards an enemy would earn for killing this player right now.</summary>
+        public int Bounty => EconomyRules.KillShards(KillStreak, DeathStreak);
+        /// <summary>Deaths since this player last made a kill; lowers their bounty.</summary>
+        public int DeathStreak { get; private set; }
+        public void AddKill() { Kills++; KillStreak++; DeathStreak = 0; }
+        public void AddAssist() => Assists++;
+
         /// <summary>Offerings carried: soulbound, lost on death, cashed in at an altar.</summary>
         public int Offerings { get; private set; }
         public void GrantOffering() => Offerings++;
@@ -480,7 +493,7 @@ namespace CTG.Gameplay
                     if (entry.Key != killer && m_CurrentTick - entry.Value <= window) assisters.Add(entry.Key);
                 }
 
-                MatchEconomy.Instance.RecordKill(killer, Class, assisters);
+                MatchEconomy.Instance.RecordKill(killer, this, assisters);
             }
 
             m_Attackers.Clear();
@@ -499,6 +512,9 @@ namespace CTG.Gameplay
 
         void Die()
         {
+            Deaths++;
+            DeathStreak++;
+            KillStreak = 0;
             ClearOfferings(true);
             ApexBuffTicksLeft = 0;
             Hooks?.ReleaseAll();

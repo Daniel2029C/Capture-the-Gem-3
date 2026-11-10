@@ -16,7 +16,9 @@ namespace CTG.Mobs
     /// </summary>
     public sealed class Drakon : MonoBehaviour, IDamageable, ITickable
     {
+        /// <summary>Life of a Drakon on its own side; the mid ones have more.</summary>
         public const int MaxHealth = 300;
+        public const int MidMaxHealth = 400;
         public const int FireballDamage = 15;
 
         const float k_SpeedPx = 0.7f;
@@ -49,12 +51,13 @@ namespace CTG.Mobs
                                     MobArt.DrakonWidthPx - 8f, MobArt.DrakonHeightPx - 8f);
         public bool CanBeHit => Health > 0;
         public int Health { get; private set; }
+        public int MaxLife { get; private set; } = MaxHealth;
         public Vector2 CenterPx => m_Center;
 
         /// <summary>Raised once when it dies: the player who landed the last hit, or null.</summary>
         public event Action<Drakon, PlayerCharacter> Died;
 
-        public static Drakon Spawn(Transform parent, TileWorld world, Vector2 centerPx, Rect homePx)
+        public static Drakon Spawn(Transform parent, TileWorld world, Vector2 centerPx, Rect homePx, int maxLife = MaxHealth)
         {
             var go = new GameObject("Drakon");
             go.transform.SetParent(parent, false);
@@ -62,7 +65,8 @@ namespace CTG.Mobs
             drakon.m_World = world;
             drakon.m_HomePx = homePx;
             drakon.m_Center = centerPx;
-            drakon.Health = MaxHealth;
+            drakon.MaxLife = maxLife;
+            drakon.Health = maxLife;
             drakon.m_Waypoint = centerPx;
             drakon.m_NextShotTick = k_FirstShotDelayTicks;
             drakon.BuildVisuals();
@@ -250,7 +254,7 @@ namespace CTG.Mobs
             if (Mathf.Abs(heading) > 4f) m_Body.flipX = heading < 0f;
 
             m_Body.color = m_HitFlashTicks > 0 ? new Color(1f, 0.6f, 0.6f) : Color.white;
-            float fraction = Mathf.Clamp01(Health / (float)MaxHealth);
+            float fraction = Mathf.Clamp01(Health / (float)MaxLife);
             m_BarFill.localScale = new Vector3(fraction, 1f, 1f);
             m_BarFill.localPosition = new Vector3(-(1f - fraction) * 30f * 0.5f / SimUnits.PixelsPerTile, 0f, 0f);
         }

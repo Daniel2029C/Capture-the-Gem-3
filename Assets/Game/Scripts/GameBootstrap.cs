@@ -113,6 +113,7 @@ namespace CTG
 
             ShopUi.Create(transform, Player);
             KeybindMenuUi.Create(transform);
+            ScoreboardUi.Create(transform);
 
             MatchFlow matchFlow = MatchFlow.Create(transform, clock, Player, gemMatch);
             if (gemMatch != null)

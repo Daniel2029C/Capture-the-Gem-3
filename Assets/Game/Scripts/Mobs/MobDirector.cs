@@ -19,6 +19,9 @@ namespace CTG.Mobs
     {
         public const int FirstSpawnTicks = 45 * SimUnits.TicksPerSecond;
         public const int RespawnTicks = 45 * SimUnits.TicksPerSecond;
+        /// <summary>The mid Drakons (one per side, inside mid) first appear here, then every interval on the clock whether or not the last was killed.</summary>
+        public const int MidFirstSpawnTicks = 120 * SimUnits.TicksPerSecond;
+        public const int MidIntervalTicks = 90 * SimUnits.TicksPerSecond;
         public const int TelegraphTicks = 5 * SimUnits.TicksPerSecond;
         /// <summary>The mid-boss returns this long after it was killed.</summary>
         public const int BossRespawnTicks = 5 * 60 * SimUnits.TicksPerSecond;
@@ -26,6 +29,8 @@ namespace CTG.Mobs
         sealed class Slot
         {
             public Team Side;
+            /// <summary>A mid Drakon: tougher, and on a fixed schedule instead of a respawn after death.</summary>
+            public bool Mid;
             public RectInt Area;
             public Drakon Mob;
             public int SpawnAt;          // match tick the next Drakon appears
@@ -34,7 +39,7 @@ namespace CTG.Mobs
             public Transform Marker;
         }
 
-        readonly Slot[] m_Slots = new Slot[2];
+        readonly Slot[] m_Slots = new Slot[4];
         LoadedMap m_Map;
         GemMatch m_Match;
         bool m_Ended;
@@ -66,6 +71,11 @@ namespace CTG.Mobs
                 director.m_Slots[i] = new Slot
                 {
                     Side = sides[i], Area = MapLayout.MobSpawnArea(map, sides[i]), SpawnAt = FirstSpawnTicks,
+                    Marker = director.MakeMarker(sides[i]),
+                };
+                director.m_Slots[2 + i] = new Slot
+                {
+                    Side = sides[i], Mid = true, Area = MapLayout.MidMobSpawnArea(map, sides[i]), SpawnAt = MidFirstSpawnTicks,
                     Marker = director.MakeMarker(sides[i]),
                 };
             }
@@ -146,7 +156,12 @@ namespace CTG.Mobs
             int now = m_Match.MatchTicks;
             foreach (Slot slot in m_Slots)
             {
-                if (slot.Mob != null) continue;
+                if (slot.Mob != null)
+                {
+                    // A mid Drakon that is still alive when the next is due just skips that turn.
+                    if (slot.Mid && now >= slot.SpawnAt) slot.SpawnAt += MidIntervalTicks;
+                    continue;
+                }
 
                 if (!slot.Telegraphing && now >= slot.SpawnAt - TelegraphTicks)
                 {
@@ -167,8 +182,9 @@ namespace CTG.Mobs
 
             Rect home = new(slot.Area.x * SimUnits.PixelsPerTile, slot.Area.y * SimUnits.PixelsPerTile,
                             slot.Area.width * SimUnits.PixelsPerTile, slot.Area.height * SimUnits.PixelsPerTile);
-            Drakon mob = Drakon.Spawn(transform, m_Map.World, slot.SpawnPx, home);
+            Drakon mob = Drakon.Spawn(transform, m_Map.World, slot.SpawnPx, home, slot.Mid ? Drakon.MidMaxHealth : Drakon.MaxHealth);
             slot.Mob = mob;
+            if (slot.Mid) slot.SpawnAt += MidIntervalTicks;
             mob.Died += (_, killer) => OnMobDied(slot, killer);
         }
 
@@ -177,15 +193,15 @@ namespace CTG.Mobs
             slot.Mob = null;
             if (m_Ended) return;
 
-            // The next Drakon on this side arrives 45 seconds after this one died.
-            slot.SpawnAt = m_Match.MatchTicks + RespawnTicks;
+            // A side Drakon returns 45 seconds after it died; mid Drakons keep their fixed schedule.
+            if (!slot.Mid) slot.SpawnAt = m_Match.MatchTicks + RespawnTicks;
             MatchEconomy.Instance?.AwardMobKill(killer);
 
             // Everyone is told which team took the offering (not where it is), so carriers can be tracked.
             if (killer != null)
             {
                 bool blue = killer.Team == Team.Blue;
-                m_Match.Announce($"Player has taken a Drakon's offering for the {(blue ? "blue" : "red")} team!", blue ? GemMatch.BlueMessage : GemMatch.RedMessage);
+                m_Match.Announce($"Player has taken a {(slot.Mid ? "mid " : "")}Drakon's offering for the {(blue ? "blue" : "red")} team!", blue ? GemMatch.BlueMessage : GemMatch.RedMessage);
             }
         }
 

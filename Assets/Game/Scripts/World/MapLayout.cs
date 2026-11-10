@@ -33,6 +33,24 @@ namespace CTG.World
             return new RectInt(mirroredX, bottom, blue.width, blue.height);
         }
 
+        /// <summary>Tiles either side of the centre column the mid mobs keep clear of, and how wide each side's area is.</summary>
+        const int k_MidGap = 2, k_MidAreaWidth = 26;
+        /// <summary>Rows above and below the mid altar that the default mid area covers.</summary>
+        const int k_MidRowsBelow = 20, k_MidRowsAbove = 25;
+
+        /// <summary>Area (world tiles) within mid where a side's mid Drakon spawns: that side's half of the centre.</summary>
+        public static RectInt MidMobSpawnArea(LoadedMap map, Team side)
+        {
+            RectInt? zone = side == Team.Blue ? map.BlueMidMobSpawn : map.RedMidMobSpawn;
+            if (zone.HasValue) return zone.Value;
+
+            int altarY = MidAltarTile(map).y;
+            int bottom = Mathf.Max(map.Border + 4, altarY - k_MidRowsBelow);
+            int top = Mathf.Min(map.Border + map.ArenaHeight - 4, altarY + k_MidRowsAbove);
+            int x = side == Team.Blue ? map.CenterX - k_MidGap - k_MidAreaWidth : map.CenterX + k_MidGap;
+            return new RectInt(x, bottom, k_MidAreaWidth, top - bottom);
+        }
+
         /// <summary>The altar's standing spot (world tile x, and the row of the floor tile it stands on).</summary>
         public static Vector2Int BaseAltarTile(LoadedMap map, Team team)
         {

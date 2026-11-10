@@ -20,13 +20,14 @@ namespace CTG.Economy
         public MatchEconomy() => Instance = this;
 
         /// <param name="killer">The player who dealt the killing blow.</param>
-        /// <param name="victimClass">The class of the player who died.</param>
+        /// <param name="victim">The player who died, still carrying the streak and deaths they had when killed.</param>
         /// <param name="assisters">Other players who damaged the victim recently.</param>
-        public void RecordKill(PlayerCharacter killer, ClassDef victimClass, IReadOnlyList<PlayerCharacter> assisters)
+        public void RecordKill(PlayerCharacter killer, PlayerCharacter victim, IReadOnlyList<PlayerCharacter> assisters)
         {
-            if (killer != null && victimClass != null)
+            if (killer != null && victim != null)
             {
-                Give(killer, EconomyRules.Kill(victimClass.IsFrontline, false), "Kill");
+                Give(killer, EconomyRules.Kill(victim.KillStreak, victim.DeathStreak, false), "Kill");
+                killer.AddKill();
                 if (!m_FirstKillGiven)
                 {
                     m_FirstKillGiven = true;
@@ -34,10 +35,13 @@ namespace CTG.Economy
                 }
             }
 
-            if (assisters == null || victimClass == null) return;
+            if (assisters == null || victim == null) return;
             foreach (PlayerCharacter assister in assisters)
             {
-                if (assister != killer) Give(assister, EconomyRules.Kill(victimClass.IsFrontline, true), "Assist");
+                if (assister == killer) continue;
+
+                Give(assister, EconomyRules.Kill(victim.KillStreak, victim.DeathStreak, true), "Assist");
+                assister.AddAssist();
             }
         }
 
