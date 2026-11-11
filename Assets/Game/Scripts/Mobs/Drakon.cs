@@ -110,7 +110,9 @@ namespace CTG.Mobs
             if (!hit.Knockback.IsZero)
             {
                 // Shoved the way the hit was travelling, then it recovers; the push also rattles its aim for a moment.
-                m_Knock = CombatRules.KnockbackVelocity(hit.Knockback, hit.Direction == 0 ? 1 : hit.Direction) * k_KnockbackScale;
+                HitInfo push = hit;
+                if (push.Direction == 0) push.Direction = 1;
+                m_Knock = CombatRules.KnockbackVelocity(push) * k_KnockbackScale;
                 m_NextShotTick = Mathf.Max(m_NextShotTick, m_Age + k_StaggerTicks);
             }
 

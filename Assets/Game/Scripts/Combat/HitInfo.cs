@@ -1,4 +1,5 @@
 using CTG.Items;
+using UnityEngine;
 
 namespace CTG.Combat
 {
@@ -33,6 +34,11 @@ namespace CTG.Combat
         public KnockbackScale Knockback;
         /// <summary>+1 pushes the target right, -1 left.</summary>
         public int Direction;
+        /// <summary>
+        /// Unit vector the hit travelled along (a projectile's heading). When set, knockback pushes along it instead of
+        /// the fixed launch. Zero (melee swings, mob attacks without a heading) keeps the fixed launch.
+        /// </summary>
+        public Vector2 Aim;
         public IDamageable Source;
         /// <summary>The item whose swing dealt this hit (melee); None for projectiles, mobs and everything else.</summary>
         public ItemId Weapon;

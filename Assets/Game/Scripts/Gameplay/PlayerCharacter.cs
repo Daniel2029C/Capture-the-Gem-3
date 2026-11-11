@@ -492,7 +492,7 @@ namespace CTG.Gameplay
             // Movement features react to the hit (a grapple can be knocked loose, for instance).
             if (Class != null) foreach (Mobility feature in Class.Mobilities) feature.OnHit(this, hit);
 
-            if (!hit.Knockback.IsZero) Motor.ApplyKnockback(CombatRules.KnockbackVelocity(hit.Knockback, hit.Direction));
+            if (!hit.Knockback.IsZero) Motor.ApplyKnockback(CombatRules.KnockbackVelocity(hit));
             return dealt;
         }
 

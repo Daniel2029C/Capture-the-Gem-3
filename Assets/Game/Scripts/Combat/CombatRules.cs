@@ -30,8 +30,25 @@ namespace CTG.Combat
             return damage;
         }
 
-        /// <param name="direction">+1 pushes right, -1 left; it flips only the horizontal part.</param>
-        public static Vector2 KnockbackVelocity(KnockbackScale knockback, int direction) =>
-            new(BaseKnockbackVelocity.x * knockback.X * direction, BaseKnockbackVelocity.y * knockback.Y);
+        /// <summary>
+        /// Speed of a standard hit that has a heading: it pushes along <see cref="HitInfo.Aim"/> at this speed (px/tick),
+        /// the same as the fixed launch's horizontal speed, so a level hit pushes exactly as far as before.
+        /// </summary>
+        public const float AimedKnockbackSpeed = 4.5f;
+
+        /// <summary>
+        /// Launch velocity (px/tick, y-up) for a hit. With a heading (<see cref="HitInfo.Aim"/>) the push goes along it,
+        /// scaled per axis by the weapon's knockback; without one it is the fixed launch (away from the attacker, up).
+        /// </summary>
+        public static Vector2 KnockbackVelocity(in HitInfo hit)
+        {
+            if (hit.Aim.sqrMagnitude > 0.0001f)
+            {
+                Vector2 aim = hit.Aim.normalized;
+                return new Vector2(aim.x * hit.Knockback.X, aim.y * hit.Knockback.Y) * AimedKnockbackSpeed;
+            }
+
+            return new Vector2(BaseKnockbackVelocity.x * hit.Knockback.X * hit.Direction, BaseKnockbackVelocity.y * hit.Knockback.Y);
+        }
     }
 }
