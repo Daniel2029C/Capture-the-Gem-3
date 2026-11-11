@@ -19,6 +19,10 @@ namespace CTG.Combat
     [Serializable]
     public struct EffectModifiers
     {
+        /// <summary>Extra flat defense (each point removes a point of damage from every hit). Effects add together; negative lowers defense.</summary>
+        public int Defense;
+        /// <summary>Cannot be hit at all while this is active (a dodge, spawn protection). Any active effect that sets it is enough.</summary>
+        public bool Invulnerable;
         /// <summary>Multiplier on weapon damage dealt (pickaxe excluded). 1 = unchanged; effects multiply together.</summary>
         public float WeaponDamageMultiplier;
         /// <summary>Fraction of incoming damage removed (0.1 = 10%). Effects add together.</summary>
@@ -45,6 +49,8 @@ namespace CTG.Combat
 
         public void Add(in EffectModifiers other)
         {
+            Defense += other.Defense;
+            Invulnerable |= other.Invulnerable;
             WeaponDamageMultiplier *= other.WeaponDamageMultiplier;
             DamageReduction += other.DamageReduction;
             RegenPerSecond += other.RegenPerSecond;

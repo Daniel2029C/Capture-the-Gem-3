@@ -45,7 +45,7 @@ namespace CTG.Mobs
         const float k_ShockKnockback = 2f;
 
         Vector2 m_Anchor;     // bottom centre it hovers over, px
-        float m_Health;
+        MobLife m_Life;
         int m_TicksSinceHit;
         int m_Age;
         int m_HitFlashTicks;
@@ -58,9 +58,9 @@ namespace CTG.Mobs
 
         public Team Team => Team.Monster;
         public Rect HitboxPx => new(m_Anchor.x - 50f, m_Anchor.y + k_HoverPx, 100f, 62f);
-        public bool CanBeHit => Health > 0;
-        public int Health => Mathf.CeilToInt(m_Health);
-        public bool IsRegenerating => m_TicksSinceHit >= RegenDelayTicks && m_Health < MaxHealth;
+        public bool CanBeHit => !m_Life.IsDead;
+        public int Health => m_Life.Current;
+        public bool IsRegenerating => m_TicksSinceHit >= RegenDelayTicks && m_Life.Current < MaxHealth;
 
         /// <summary>Raised once when it dies: the player who landed the last hit, or null.</summary>
         public event Action<ElderDrakon, PlayerCharacter> Died;
@@ -72,7 +72,7 @@ namespace CTG.Mobs
             var boss = go.AddComponent<ElderDrakon>();
             boss.m_Anchor = bottomCenterPx;
             boss.m_World = world;
-            boss.m_Health = MaxHealth;
+            boss.m_Life = new MobLife(MaxHealth, RegenPerSecond);
             boss.m_TicksSinceHit = RegenDelayTicks;
             boss.m_Body = go.AddComponent<SpriteRenderer>();
             boss.m_Body.sprite = MobArt.Drakon(0);
@@ -99,20 +99,15 @@ namespace CTG.Mobs
 
         public int ApplyHit(in HitInfo hit)
         {
-            if (m_Health <= 0f) return 0;
-
-            int damage = CombatRules.ComputeDamage(hit.Damage, 0);
+            int damage = m_Life.TakeHit(hit);
             if (damage <= 0) return 0;
 
-            damage = Mathf.Min(damage, Health);
-            m_Health -= damage;
             m_TicksSinceHit = 0;
             m_HitFlashTicks = 6;
             CombatText.Spawn(HitboxPx.center + new Vector2(0f, 40f), damage.ToString(), CombatText.DummyDamaged);
 
-            if (m_Health <= 0f)
+            if (m_Life.IsDead)
             {
-                m_Health = 0f;
                 Died?.Invoke(this, hit.Source as PlayerCharacter);
                 Destroy(gameObject);
             }
@@ -123,18 +118,21 @@ namespace CTG.Mobs
         /// <summary>Removes it without a kill.</summary>
         public void Despawn()
         {
-            m_Health = 0f;
+            m_Life.Kill();
             Destroy(gameObject);
         }
 
         public void Tick(int tick)
         {
-            if (m_Health <= 0f) return;
+            if (m_Life.IsDead) return;
 
             m_Age++;
             if (m_HitFlashTicks > 0) m_HitFlashTicks--;
-            if (m_TicksSinceHit < RegenDelayTicks) m_TicksSinceHit++;
-            else if (m_Health < MaxHealth) m_Health = Mathf.Min(MaxHealth, m_Health + RegenPerSecond / SimUnits.TicksPerSecond);
+            // It starts to regenerate once it has gone RegenDelayTicks without being hit.
+            bool delaying = m_TicksSinceHit < RegenDelayTicks;
+            if (delaying) m_TicksSinceHit++;
+            m_Life.RegenBlocked = delaying;
+            m_Life.Tick();
 
             if (m_ShockWindup > 0)
             {

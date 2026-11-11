@@ -123,6 +123,14 @@ namespace CTG.Gameplay
         /// <summary>The class's grappling hooks (ability 1), or null if it has none.</summary>
         public GrapplingHooks Hooks { get; private set; }
 
+        TileEditor m_TileEditor;
+
+        /// <summary>
+        /// Whether this player may mine the tile: it must be breakable, and none of their own hooks can be latched to it
+        /// (you cannot dig out what you are hanging from; other players still can, which drops the hook).
+        /// </summary>
+        public bool CanMineTile(Vector2Int tile) => m_TileEditor.CanMine(tile) && (Hooks == null || !Hooks.IsLatchedTo(tile));
+
         /// <summary>Gives the player grappling hooks with this tuning, or takes them away (null). Used by <see cref="GrappleMobility"/>.</summary>
         public void SetGrapple(GrappleMobility stats)
         {
@@ -131,8 +139,10 @@ namespace CTG.Gameplay
         }
         /// <summary>Abilities 1-3 (default keys Shift, E, C).</summary>
         public AbilitySet Abilities { get; } = new();
+        /// <summary>The state the class's abilities and items share (see <see cref="ClassKit"/>), or null.</summary>
+        public ClassKit Kit { get; private set; }
         /// <summary>The Archer's shared ability state, or null for other classes.</summary>
-        public ArcherKit Archer { get; private set; }
+        public ArcherKit Archer => Kit as ArcherKit;
         /// <summary>The player's own spawn room (world px), or null. Standing in it gives extra regeneration.</summary>
         public Rect? HomeRoomPx { get; set; }
         /// <summary>No controls reach the player (match countdown, results): they still stand and fall, but can't act.</summary>
@@ -142,27 +152,30 @@ namespace CTG.Gameplay
         public InputFrame LastInput { get; private set; }
         public Vector2Int CursorTile { get; private set; }
         public Team Team { get; set; } = Team.Red;
-        public int Defense { get; set; }
+        /// <summary>Flat defense: the class's, plus whatever status effects add.</summary>
+        public int Defense => (Class != null ? Class.Stats.Defense : 0) + Effects.Aggregate().Defense;
         /// <summary>The selected class, or null before one is chosen.</summary>
         public ClassDef Class { get; private set; }
 
         public Rect HitboxPx => new(Motor.Position.x, Motor.Position.y, Motor.Width, Motor.Height);
-        public bool CanBeHit => Health != null && !Health.IsDead && !Health.IsImmune;
+        public bool CanBeHit => Health != null && !Health.IsDead && !Health.IsImmune && !Effects.Aggregate().Invulnerable;
 
         public void Initialize(TileWorld world, TileEditor tileEditor, PlayerInput input, Vector2 spawnPx)
         {
             if (LocalPlayer == null) LocalPlayer = this;
             m_Input = input;
             m_World = world;
-            m_SmartCursor = new SmartCursor(world, tileEditor);
+            m_TileEditor = tileEditor;
+            m_SmartCursor = new SmartCursor(world, tileEditor) { CanMineTile = CanMineTile };
             m_SpawnPx = spawnPx;
             Motor = new PlayerMotor(world, HitboxWidthPx, HitboxHeightPx) { Stats = movement };
             Motor.Teleport(spawnPx);
             Health = new Health(maxLife, regenPerSecond, hitImmunityTicks,
                                 SimUnits.SecondsToTicks(respawnSeconds));
+            Health.Died += OnHealthDied;
             Mana = new Mana(0, manaRegenPerSecond);
             Inventory = new Inventory();
-            ItemUser = new ItemUser(Inventory, tileEditor, this);
+            ItemUser = new ItemUser(Inventory, tileEditor, this) { CanMineTile = CanMineTile };
             Progress.LeveledUp += level => CombatText.Spawn(Motor.Center + new Vector2(0f, 56f), $"Level {level}!", CombatText.Healed);
             Purchases.Reset();
 
@@ -217,7 +230,6 @@ namespace CTG.Gameplay
             Health.Refill();
             Mana.Max = def.Stats.MaxMana;
             Mana.Refill();
-            Defense = def.Stats.Defense;
             Motor.Stats = ClassAdjustedMovement();
             if (previous != null) foreach (Mobility feature in previous.Mobilities) feature.Remove(this);
             foreach (Mobility feature in def.Mobilities) feature.Apply(this);
@@ -227,13 +239,12 @@ namespace CTG.Gameplay
             Effects.ClearAll();
             ShopOpen = false;
 
-            bool archerKit = System.Array.Exists(def.Abilities, id => id >= AbilityId.ArcherSprint && id <= AbilityId.ArcherLuminite);
-            Archer = archerKit ? new ArcherKit() : null;
+            Kit = def.CreateKit?.Invoke();
             ItemUser.Bow.Kit = Archer;
             ItemUser.MiningSpeedMultiplier = def.Stats.MiningSpeedMultiplier;
             for (int i = 0; i < AbilitySet.SlotCount; i++)
             {
-                Abilities.Set(i, i < def.Abilities.Length ? AbilityFactory.Create(def.Abilities[i], Archer) : null);
+                Abilities.Set(i, i < def.Abilities.Count ? AbilityFactory.Create(def.Abilities[i], Kit) : null);
             }
 
             ItemUser.Cancel();
@@ -252,7 +263,7 @@ namespace CTG.Gameplay
             var pivot = new GameObject("Held Item");
             m_HeldItemPivot = pivot.transform;
             m_HeldItemPivot.SetParent(transform, false);
-            m_HeldItemPivot.localPosition = MeleeSwing.HandOffsetPx / SimUnits.PixelsPerTile;
+            m_HeldItemPivot.localPosition = SwingProfile.Overhead.HandOffsetPx / SimUnits.PixelsPerTile;
 
             var item = new GameObject("Sprite");
             item.transform.SetParent(m_HeldItemPivot, false);
@@ -338,7 +349,7 @@ namespace CTG.Gameplay
 
             // Abilities act before the item so a mode change applies to this tick's shot.
             float cooldownRate = 1f / Modifiers.AbilityCooldownScale;
-            Archer?.Tick(cooldownRate);
+            Kit?.Tick(cooldownRate);
             Abilities.Tick(new AbilityContext(this, tick, cooldownRate), input.AbilityPressed, input.AbilityHeld);
             Motor.RunSpeedScale = Abilities.RunSpeedScale * (ItemUser.Bow.IsChargingLuminite && Archer != null ? Archer.Stats.LuminiteDrawRunScale : 1f);
             Motor.RunAccelerationScale = Abilities.RunAccelerationScale;
@@ -374,6 +385,10 @@ namespace CTG.Gameplay
 
             if (ItemUser.Bow.Active) Motor.Direction = ItemUser.UseDirection;
 
+            // A pickaxe swing keeps the player facing the way it swings, even while running the other way
+            // (the motor turns the player to face their movement, which would otherwise win).
+            if (ItemUser.IsUsing && Inventory.Selected.Def.IsPickaxe) Motor.Direction = ItemUser.UseDirection;
+
             HandleDevInput(input, cursorPx);
             // Effects applied earlier this tick (lava, nectar) count now; they are counted down after life is updated.
             m_EffectModifiers = Effects.Aggregate();
@@ -382,7 +397,6 @@ namespace CTG.Gameplay
             Health.DrainPerSecond = m_EffectModifiers.NetDrainPerSecond;
             Health.RegenBlocked = m_EffectModifiers.BlocksRegen;
             Health.Tick();
-            if (Health.IsDead) Die(); // drained to death (burning)
             Effects.Tick();
             if (!Health.IsDead)
             {
@@ -464,8 +478,13 @@ namespace CTG.Gameplay
 
             float reduction = (Class != null ? Class.Stats.DamageReduction : 0f) + Modifiers.DamageReduction;
             int damage = CombatRules.ComputeDamage(hit.Damage, Defense, reduction);
-            int dealt = Health.TakeDamage(damage);
+
+            // A lethal hit raises Health.Died (with this attacker as the killer) before this returns; OnHealthDied does the rest.
+            int dealt = Health.TakeDamage(damage, DamageFlags.None, hit.Source);
             if (dealt <= 0) return 0;
+
+            CombatText.Spawn(Motor.Center, dealt.ToString(), CombatText.PlayerDamaged);
+            if (Health.IsDead) return dealt;
 
             var attacker = hit.Source as PlayerCharacter;
             if (attacker != null && attacker != this && attacker.Team != Team) m_Attackers[attacker] = m_CurrentTick;
@@ -473,18 +492,7 @@ namespace CTG.Gameplay
             // Movement features react to the hit (a grapple can be knocked loose, for instance).
             if (Class != null) foreach (Mobility feature in Class.Mobilities) feature.OnHit(this, hit);
 
-            CombatText.Spawn(Motor.Center, dealt.ToString(), CombatText.PlayerDamaged);
-
-            if (Health.IsDead)
-            {
-                CreditKill(attacker);
-                Die();
-            }
-            else if (!hit.Knockback.IsZero)
-            {
-                Motor.ApplyKnockback(CombatRules.KnockbackVelocity(hit.Knockback, hit.Direction));
-            }
-
+            if (!hit.Knockback.IsZero) Motor.ApplyKnockback(CombatRules.KnockbackVelocity(hit.Knockback, hit.Direction));
             return dealt;
         }
 
@@ -518,6 +526,13 @@ namespace CTG.Gameplay
         {
             if (input.DevEndMatch) DevEndMatchRequested?.Invoke();
             if (input.DevSkipOvertime) DevSkipOvertimeRequested?.Invoke();
+        }
+
+        /// <summary>The one place a death is handled, whatever caused it: an attack, lava or burning.</summary>
+        void OnHealthDied()
+        {
+            CreditKill(Health.Killer as PlayerCharacter);
+            Die();
         }
 
         void Die()
@@ -567,15 +582,12 @@ namespace CTG.Gameplay
             if (!inLava || m_LavaCooldown > 0) return;
 
             int damage = CombatRules.ComputeDamage(lavaDamage, Defense);
-            int dealt = Health.TakeEnvironmentalDamage(damage);
+            int dealt = Health.TakeDamage(damage, DamageFlags.Environmental);
             m_LavaCooldown = lavaHitCooldownTicks;
             CombatText.Spawn(Motor.Center, dealt.ToString(), CombatText.PlayerDamaged);
 
-            if (Health.IsDead)
-            {
-                Die();
-                return;
-            }
+            // Dying in lava is handled by OnHealthDied; a dead player does not start burning.
+            if (Health.IsDead) return;
 
             Effects.Apply(StatusEffectDefs.Burning, SimUnits.SecondsToTicks(lavaBurnSeconds));
         }
@@ -588,7 +600,7 @@ namespace CTG.Gameplay
             Motor.Teleport(m_SpawnPx);
             ItemUser.Cancel();
             Abilities.Reset();
-            Archer?.Reset();
+            Kit?.Reset();
             Motor.RunSpeedScale = 1f;
             Motor.RunAccelerationScale = 1f;
             Mana.Refill();
@@ -683,8 +695,9 @@ namespace CTG.Gameplay
                 m_HeldItem.transform.localScale = Vector3.one;
             }
 
-            float angle = MeleeSwing.Angle(ItemUser.ItemAnimation - alpha, ItemUser.ItemAnimationMax);
+            float angle = MeleeSwing.Angle(ItemUser.ItemAnimation - alpha, ItemUser.ItemAnimationMax, def.Swing);
             int direction = ItemUser.UseDirection;
+            m_HeldItemPivot.localPosition = def.Swing.HandOffsetPx / SimUnits.PixelsPerTile;
             m_HeldItemPivot.localScale = new Vector3(direction, 1f, 1f);
             m_HeldItemPivot.localRotation = Quaternion.Euler(0f, 0f, angle * direction);
         }

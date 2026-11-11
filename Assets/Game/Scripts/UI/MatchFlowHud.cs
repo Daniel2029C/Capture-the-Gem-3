@@ -1,5 +1,6 @@
 using CTG.Combat;
 using CTG.Gameplay;
+using CTG.Rendering;
 using UnityEngine;
 
 namespace CTG.UI

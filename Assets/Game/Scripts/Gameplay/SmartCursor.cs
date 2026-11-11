@@ -32,6 +32,11 @@ namespace CTG.Gameplay
         readonly List<Vector2Int> m_Endpoints = new();
         readonly List<Vector2Int> m_Targets = new();
 
+        /// <summary>Whether the owner may mine a tile (set by the owner); null = anything breakable. Tiles it refuses are never picked.</summary>
+        public System.Func<Vector2Int, bool> CanMineTile;
+
+        bool CanMine(Vector2Int tile) => CanMineTile != null ? CanMineTile(tile) : m_Editor.CanMine(tile);
+
         public SmartCursor(TileWorld world, TileEditor editor)
         {
             m_World = world;
@@ -206,7 +211,7 @@ namespace CTG.Gameplay
             foreach (Vector2Int target in m_Targets)
             {
                 Vector2Int tile = new(target.x, Down(target.y));
-                if (!m_Editor.CanMine(tile)) continue;
+                if (!CanMine(tile)) continue;
 
                 var tileCenterDown = new Vector2((target.x + 0.5f) * SimUnits.PixelsPerTile,
                                                  (target.y + 0.5f) * SimUnits.PixelsPerTile);

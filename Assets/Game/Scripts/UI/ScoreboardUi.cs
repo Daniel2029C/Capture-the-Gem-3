@@ -3,6 +3,7 @@ using CTG.Combat;
 using CTG.Economy;
 using CTG.Gameplay;
 using CTG.Input;
+using CTG.Rendering;
 using UnityEngine;
 
 namespace CTG.UI

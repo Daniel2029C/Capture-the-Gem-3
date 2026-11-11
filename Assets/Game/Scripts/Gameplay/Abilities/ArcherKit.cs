@@ -40,7 +40,7 @@ namespace CTG.Gameplay
     /// State the Archer's three abilities and its bow share: the light arrow charges, the delay that
     /// separates the two kinds of shot, and the armed Luminite arrow.
     /// </summary>
-    public sealed class ArcherKit
+    public sealed class ArcherKit : ClassKit
     {
         public readonly ArcherStats Stats = new();
 
@@ -59,7 +59,7 @@ namespace CTG.Gameplay
 
         public ArcherKit() => Reset();
 
-        public void Reset()
+        public override void Reset()
         {
             LightCharges = Stats.MaxLightCharges;
             LuminiteArmed = false;
@@ -71,7 +71,7 @@ namespace CTG.Gameplay
 
         /// <summary>Regeneration and cooldowns; once per tick while alive.</summary>
         /// <param name="cooldownRate">1 normally; above 1 when cooldown reductions make timers run faster.</param>
-        public void Tick(float cooldownRate = 1f)
+        public override void Tick(float cooldownRate = 1f)
         {
             if (LightCharges < Stats.MaxLightCharges)
             {

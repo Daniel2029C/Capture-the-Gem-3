@@ -50,8 +50,9 @@ namespace CTG.Mobs
         public Rect HitboxPx => new(m_Center.x - MobArt.DrakonWidthPx * 0.5f + 4f, m_Center.y - MobArt.DrakonHeightPx * 0.5f + 4f,
                                     MobArt.DrakonWidthPx - 8f, MobArt.DrakonHeightPx - 8f);
         public bool CanBeHit => Health > 0;
-        public int Health { get; private set; }
-        public int MaxLife { get; private set; } = MaxHealth;
+        MobLife m_Life;
+        public int Health => m_Life.Current;
+        public int MaxLife => m_Life.Max;
         public Vector2 CenterPx => m_Center;
 
         /// <summary>Raised once when it dies: the player who landed the last hit, or null.</summary>
@@ -65,8 +66,7 @@ namespace CTG.Mobs
             drakon.m_World = world;
             drakon.m_HomePx = homePx;
             drakon.m_Center = centerPx;
-            drakon.MaxLife = maxLife;
-            drakon.Health = maxLife;
+            drakon.m_Life = new MobLife(maxLife);
             drakon.m_Waypoint = centerPx;
             drakon.m_NextShotTick = k_FirstShotDelayTicks;
             drakon.BuildVisuals();
@@ -103,13 +103,9 @@ namespace CTG.Mobs
 
         public int ApplyHit(in HitInfo hit)
         {
-            if (Health <= 0) return 0;
-
-            int damage = CombatRules.ComputeDamage(hit.Damage, 0);
+            int damage = m_Life.TakeHit(hit);
             if (damage <= 0) return 0;
 
-            damage = Mathf.Min(damage, Health);
-            Health -= damage;
             m_HitFlashTicks = 6;
             if (!hit.Knockback.IsZero)
             {
@@ -132,7 +128,7 @@ namespace CTG.Mobs
         /// <summary>Removes it without a kill (the Apex Shift).</summary>
         public void Despawn()
         {
-            Health = 0;
+            m_Life.Kill();
             Destroy(gameObject);
         }
 

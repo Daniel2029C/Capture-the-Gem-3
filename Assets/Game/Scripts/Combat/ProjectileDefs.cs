@@ -15,10 +15,33 @@ namespace CTG.Combat
         LightArrow = 4,
         /// <summary>Archer's armed shot: pierces several targets.</summary>
         LuminiteArrow = 5,
-        /// <summary>Second shot of a Luminite arrow: launched from the original firing spot once the first arrow ends.</summary>
+        /// <summary>Second shot of a Luminite arrow: launched from the original firing spot one second after the first arrow was fired.</summary>
         LuminiteFollowUp = 6,
         /// <summary>A Drakon's fireball: slow, straight, ends on the first thing it hits.</summary>
         Fireball = 7,
+    }
+
+    /// <summary>When a projectile's follow-up is launched.</summary>
+    public enum FollowUpTrigger
+    {
+        /// <summary>When the projectile ends, for any reason.</summary>
+        WhenEnded,
+        /// <summary>A fixed time after the projectile was fired, whether or not it is still flying by then.</summary>
+        AfterDelay,
+    }
+
+    /// <summary>
+    /// A projectile launched after another one: it starts at the parent's firing position with the parent's launch
+    /// velocity, and inherits the parent's damage at that moment.
+    /// </summary>
+    public sealed class FollowUpDef
+    {
+        public ProjectileId Projectile;
+        public FollowUpTrigger Trigger = FollowUpTrigger.WhenEnded;
+        /// <summary>Ticks after the parent was fired (real time, not updates). Only for <see cref="FollowUpTrigger.AfterDelay"/>.</summary>
+        public int DelayTicks;
+        /// <summary>Extra updates per tick for the follow-up.</summary>
+        public int ExtraUpdates;
     }
 
     /// <summary>
@@ -68,13 +91,8 @@ namespace CTG.Combat
         /// <summary>Side of the square blast that hits everything around it when the projectile ends. 0 = none.</summary>
         public int ExplosionSizePx;
         public Color Color = Color.white;
-        /// <summary>
-        /// A projectile launched when this one ends (for any reason): it starts at this one's firing position with this
-        /// one's launch velocity, and inherits its current damage. None = no follow-up.
-        /// </summary>
-        public ProjectileId FollowUp = ProjectileId.None;
-        /// <summary>Extra updates per tick for the follow-up.</summary>
-        public int FollowUpExtraUpdates;
+        /// <summary>A projectile launched after this one (see <see cref="FollowUpDef"/>). Null = no follow-up.</summary>
+        public FollowUpDef FollowUp;
         /// <summary>Damage is multiplied by this after each target hit (1 = unchanged).</summary>
         public float DamageDecayPerHit = 1f;
         /// <summary>Set for boomerangs: flight is steered by these stats instead of gravity.</summary>
@@ -125,14 +143,15 @@ namespace CTG.Combat
         };
 
         // Luminite arrow: 10×10, passes through up to 4 targets, 90-update lifetime, gravity after 14 updates, damage x0.96 per
-        // hit. When it ends it launches the follow-up shot from where it was fired.
+        // hit. One second after it was fired (60 ticks, even if it has already ended) the follow-up shot leaves from
+        // where it was fired.
         static readonly ProjectileDef s_Luminite = new()
         {
             Id = ProjectileId.LuminiteArrow, Name = "Luminite Arrow",
             LifetimeUpdates = 90, Penetrate = 4,
             GravityDelayUpdates = 14, GravityPerUpdate = -0.1f, MaxFallSpeed = 16f,
             DamageDecayPerHit = 0.96f,
-            FollowUp = ProjectileId.LuminiteFollowUp, FollowUpExtraUpdates = 2,
+            FollowUp = new FollowUpDef { Projectile = ProjectileId.LuminiteFollowUp, Trigger = FollowUpTrigger.AfterDelay, DelayTicks = 60, ExtraUpdates = 2 },
             Color = new Color32(90, 255, 200, 255),
         };
 

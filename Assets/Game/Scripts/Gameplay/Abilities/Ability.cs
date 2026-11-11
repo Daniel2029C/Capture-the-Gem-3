@@ -120,9 +120,10 @@ namespace CTG.Gameplay
 
     public static class AbilityFactory
     {
-        /// <param name="kit">The Archer's shared state, or null for classes without it.</param>
-        public static Ability Create(AbilityId id, ArcherKit kit)
+        /// <param name="classKit">The class's shared state, or null for classes without one.</param>
+        public static Ability Create(AbilityId id, ClassKit classKit)
         {
+            var kit = classKit as ArcherKit;
             switch (id)
             {
                 case AbilityId.ArcherSprint: return new SprintAbility(kit != null ? kit.Stats.Sprint : new SprintStats());

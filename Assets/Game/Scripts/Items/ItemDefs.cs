@@ -117,6 +117,8 @@ namespace CTG.Items
             team == Combat.Team.Blue && CreateTileBlue != TileId.Air ? CreateTileBlue : CreateTile;
         public bool DealsDamage => Damage > 0;
         public float SwingLengthPx => SizePx * Scale;
+        /// <summary>How a <see cref="UseStyle.Swing"/> item swings (see <see cref="Combat.SwingProfile"/>).</summary>
+        public Combat.SwingProfile Swing = Combat.SwingProfile.Overhead;
     }
 
     public static class ItemDefs

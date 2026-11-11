@@ -148,6 +148,19 @@ namespace CTG.Gameplay
             return pull;
         }
 
+        /// <summary>Whether any of these hooks is latched onto the given tile.</summary>
+        public bool IsLatchedTo(Vector2Int tile)
+        {
+            for (int i = 0; i < m_Hooks.Count; i++)
+            {
+                GrappleHook hook = m_Hooks[i];
+                if (hook.State == HookState.Latched &&
+                    SimUnits.PixelToTile(hook.Center.x) == tile.x && SimUnits.PixelToTile(hook.Center.y) == tile.y) return true;
+            }
+
+            return false;
+        }
+
         /// <summary>Removes every hook (jumping off, dying).</summary>
         public void ReleaseAll() => m_Hooks.Clear();
 

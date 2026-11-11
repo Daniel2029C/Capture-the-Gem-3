@@ -64,6 +64,15 @@ namespace CTG.Combat
         readonly List<Projectile> m_Projectiles = new();
         readonly List<SpriteRenderer> m_ProjectileViews = new();
 
+        /// <summary>Follow-ups waiting for their delay to run out (kept here so they still fire after the parent has ended).</summary>
+        struct ScheduledFollowUp
+        {
+            public Projectile Parent;
+            public int TicksLeft;
+        }
+
+        readonly List<ScheduledFollowUp> m_Scheduled = new();
+
         struct Blast
         {
             public Rect RectPx;
@@ -103,6 +112,11 @@ namespace CTG.Combat
             projectile.Position = centerPx - projectile.Size * 0.5f;
             projectile.PreviousPosition = projectile.Position;
             m_Projectiles.Add(projectile);
+            if (def.FollowUp != null && def.FollowUp.Trigger == FollowUpTrigger.AfterDelay)
+            {
+                m_Scheduled.Add(new ScheduledFollowUp { Parent = projectile, TicksLeft = def.FollowUp.DelayTicks });
+            }
+
             return projectile;
         }
 
@@ -119,6 +133,20 @@ namespace CTG.Combat
             }
 
             m_Projectiles.RemoveAll(p => !p.Active);
+
+            // Delayed follow-ups launch once their time is up, counted in ticks from when the parent was fired.
+            for (int i = m_Scheduled.Count - 1; i >= 0; i--)
+            {
+                ScheduledFollowUp scheduled = m_Scheduled[i];
+                if (--scheduled.TicksLeft > 0)
+                {
+                    m_Scheduled[i] = scheduled;
+                    continue;
+                }
+
+                m_Scheduled.RemoveAt(i);
+                LaunchFollowUp(scheduled.Parent);
+            }
 
             for (int i = m_Blasts.Count - 1; i >= 0; i--)
             {
@@ -311,16 +339,21 @@ namespace CTG.Combat
             }
         }
 
+        /// <summary>The parent's follow-up leaves from the firing spot along the same launch, with the parent's current damage.</summary>
+        void LaunchFollowUp(Projectile parent)
+        {
+            FollowUpDef followUp = parent.Def.FollowUp;
+            if (followUp == null || parent.Owner == null) return;
+
+            Spawn(followUp.Projectile, parent.Owner, parent.OriginCenter, parent.LaunchVelocity, parent.Damage, parent.Knockback, followUp.ExtraUpdates);
+        }
+
         void End(Projectile p)
         {
             if (!p.Active) return;
             p.Active = false;
 
-            // The follow-up (a Luminite arrow's second shot) leaves from the firing spot along the same launch.
-            if (p.Def.FollowUp != ProjectileId.None && p.Owner != null)
-            {
-                Spawn(p.Def.FollowUp, p.Owner, p.OriginCenter, p.LaunchVelocity, p.Damage, p.Knockback, p.Def.FollowUpExtraUpdates);
-            }
+            if (p.Def.FollowUp != null && p.Def.FollowUp.Trigger == FollowUpTrigger.WhenEnded) LaunchFollowUp(p);
 
             int size = p.Def.ExplosionSizePx;
             if (size <= 0) return;

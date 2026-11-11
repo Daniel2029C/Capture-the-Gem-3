@@ -80,24 +80,27 @@ namespace CTG.Classes
     /// </summary>
     public sealed class ClassDef
     {
-        public ClassId Id;
-        public string Name;
-        public string Description;
+        public ClassId Id { get; init; }
+        public string Name { get; init; }
+        public string Description { get; init; }
 
         /// <summary>The class's numbers: life, mana, defense, damage reduction and movement/mining bonuses.</summary>
-        public ClassStats Stats = ClassStats.Default;
+        public ClassStats Stats { get; init; } = ClassStats.Default;
 
         /// <summary>
         /// Movement features the class has: double jump, grappling hooks (ability 1), fast fall and so on. List at most
         /// one of each kind.
         /// </summary>
-        public Mobility[] Mobilities = Array.Empty<Mobility>();
+        public IReadOnlyList<Mobility> Mobilities { get; init; } = Array.Empty<Mobility>();
 
         /// <summary>The abilities on slots 1-3 (default keys Shift, E, C). Missing entries are empty slots.</summary>
-        public AbilityId[] Abilities = Array.Empty<AbilityId>();
+        public IReadOnlyList<AbilityId> Abilities { get; init; } = Array.Empty<AbilityId>();
+
+        /// <summary>Makes the state this class's abilities and items share (see <see cref="ClassKit"/>). Null = the class has none.</summary>
+        public Func<ClassKit> CreateKit { get; init; }
 
         /// <summary>Items placed in the inventory on selection, replacing whatever was there.</summary>
-        public IReadOnlyList<LoadoutEntry> Loadout = Array.Empty<LoadoutEntry>();
+        public IReadOnlyList<LoadoutEntry> Loadout { get; init; } = Array.Empty<LoadoutEntry>();
     }
 
     public static class ClassDefs
@@ -110,6 +113,7 @@ namespace CTG.Classes
             Stats = new ClassStats(maxLife: 140),
             Mobilities = new Mobility[] { new DoubleJumpMobility(), new FastFallMobility() },
             Abilities = new[] { AbilityId.ArcherSprint, AbilityId.ArcherLightArrow, AbilityId.ArcherLuminite },
+            CreateKit = () => new ArcherKit(),
             Loadout = new[]
             {
                 new LoadoutEntry(0, ItemId.ShardstonePickaxe),

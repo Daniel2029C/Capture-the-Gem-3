@@ -48,7 +48,7 @@ namespace CTG.Rendering
             {
                 bool inRange = ItemUser.InTileRange(m_Player.Motor, tile, def.TileBoost + m_Player.ItemUser.BonusTileReach);
                 Rect hitbox = new Rect(m_Player.Motor.Position, new Vector2(m_Player.Motor.Width, m_Player.Motor.Height));
-                bool valid = def.IsPickaxe ? m_Editor.CanMine(tile) : m_Editor.CanPlace(tile, def.TileFor(m_Player.Team), hitbox);
+                bool valid = def.IsPickaxe ? m_Player.CanMineTile(tile) : m_Editor.CanPlace(tile, def.TileFor(m_Player.Team), hitbox);
 
                 m_Cursor.transform.position = new Vector3(tile.x, tile.y, 0f);
                 m_Cursor.color = inRange && valid ? new Color(1f, 1f, 1f, 0.9f) : new Color(1f, 0.3f, 0.3f, 0.6f);

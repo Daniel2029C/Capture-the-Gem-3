@@ -53,6 +53,9 @@ namespace CTG.Gameplay
         /// <summary>The previous use was cut short by a switch: the next use keeps the remaining action cooldown instead of resetting it.</summary>
         bool m_CarryCooldown;
 
+        /// <summary>Whether the owner may mine a tile (set by the owner); null = anything breakable.</summary>
+        public System.Func<Vector2Int, bool> CanMineTile;
+
         public ItemUser(Inventory inventory, TileEditor tileEditor, IDamageable owner)
         {
             m_Inventory = inventory;
@@ -126,7 +129,7 @@ namespace CTG.Gameplay
 
             if (def.IsPickaxe)
             {
-                if (m_TileEditor.CanMine(cursorTile))
+                if (CanMineTile != null ? CanMineTile(cursorTile) : m_TileEditor.CanMine(cursorTile))
                 {
                     m_TileEditor.Hit(cursorTile, def.PickPower, tick, m_Inventory);
                     ItemTime = ScaledByMining(def.UseTime);
@@ -174,8 +177,10 @@ namespace CTG.Gameplay
             if (!def.DealsDamage || def.UseStyle != UseStyle.Swing) return;
 
             var ownerBox = new Rect(motor.Position.x, motor.Position.y, motor.Width, motor.Height);
-            float angle = MeleeSwing.Angle(ItemAnimation, ItemAnimationMax);
-            Rect swing = MeleeSwing.Hitbox(ownerBox, UseDirection, angle, def.SwingLengthPx);
+            if (!MeleeSwing.CanHit(ItemAnimation, ItemAnimationMax, def.Swing)) return;
+
+            float angle = MeleeSwing.Angle(ItemAnimation, ItemAnimationMax, def.Swing);
+            Rect swing = MeleeSwing.Hitbox(ownerBox, UseDirection, angle, def.SwingLengthPx, def.Swing);
 
             IReadOnlyList<IDamageable> targets = DamageableRegistry.All;
             for (int i = 0; i < targets.Count; i++)
