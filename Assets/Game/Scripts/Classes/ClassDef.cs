@@ -105,11 +105,11 @@ namespace CTG.Classes
 
     public static class ClassDefs
     {
-        // Archer: 140 life, no mana, double jump, Shardstone Pickaxe in slot 1 and Rancor in slot 3, with sprint, light arrow and Luminite abilities. The rest of its
+        // Spirit Archer: 140 life, no mana, double jump, Shardstone Pickaxe in slot 1 and Rancor in slot 3, with sprint, light arrow and Luminite abilities. The rest of its
         // CTG2 loadout (potions, armor, accessories, dyes) is left out until those items exist.
         static readonly ClassDef s_Archer = new()
         {
-            Id = ClassId.Archer, Name = "Archer", Description = "",
+            Id = ClassId.Archer, Name = "Spirit Archer", Description = "",
             Stats = new ClassStats(maxLife: 140),
             Mobilities = new Mobility[] { new DoubleJumpMobility(), new FastFallMobility() },
             Abilities = new[] { AbilityId.ArcherSprint, AbilityId.ArcherLightArrow, AbilityId.ArcherLuminite },

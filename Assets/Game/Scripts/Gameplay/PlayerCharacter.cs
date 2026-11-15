@@ -61,6 +61,10 @@ namespace CTG.Gameplay
         int m_LavaCooldown;
         Team m_BodyTeam = Team.Neutral;
         SpriteRenderer m_Body;
+        /// <summary>The class's character art when it has some; otherwise the placeholder body is drawn.</summary>
+        CharacterSprite m_Art;
+        /// <summary>How far out along the aim the drawn bow sits, in tiles: where the class art's hand grips it, or the default.</summary>
+        float m_BowGripTiles = 9f * 1.41421356f / SimUnits.PixelsPerTile;
         Transform m_HeldItemPivot;
         SpriteRenderer m_HeldItem;
         Transform m_BowPivot;
@@ -258,6 +262,14 @@ namespace CTG.Gameplay
             Effects.ClearAll();
             ShopOpen = false;
 
+            ClassSpriteSet art = ClassSpriteSet.For(def.Id);
+            m_Art.SetSpriteSet(art);
+            // With class art, the bow sits where the art's hands hold it; otherwise at the hitbox centre.
+            bool hasArt = art != null && art.HasFrames;
+            m_BowPivot.localPosition = hasArt
+                ? (Vector3)(art.BowPivotPx / ClassSpriteSet.PixelsPerUnit)
+                : new Vector3(0f, HitboxHeightPx * 0.5f / SimUnits.PixelsPerTile, 0f);
+            m_BowGripTiles = hasArt ? art.GripDistancePx / ClassSpriteSet.PixelsPerUnit : 9f * 1.41421356f / SimUnits.PixelsPerTile;
             Kit = def.CreateKit?.Invoke();
             ItemUser.Bow.Kit = Archer;
             ItemUser.MiningSpeedMultiplier = def.Stats.MiningSpeedMultiplier;
@@ -278,6 +290,7 @@ namespace CTG.Gameplay
             m_BodyTeam = Team;
             m_Body.sprite = PlaceholderSprites.Player(k_SpriteWidthPx, k_SpriteHeightPx, TeamColors.For(Team));
             m_Body.sortingOrder = 10;
+            m_Art = CharacterSprite.Create(transform, 10);
 
             var pivot = new GameObject("Held Item");
             m_HeldItemPivot = pivot.transform;
@@ -649,6 +662,21 @@ namespace CTG.Gameplay
             if (Health.IsImmune && (Time.frameCount / 4) % 2 == 0) tint.a = 0.4f;
             m_Body.color = tint;
 
+            // Class art, when it exists, replaces the placeholder body (with its team outline as a separate layer).
+            bool hasArt = m_Art.HasArt;
+            if (hasArt) m_Body.enabled = false;
+            ChargeBow bow = ItemUser.Bow;
+            bool swinging = ItemUser.ItemAnimation > 0 && !bow.Active && Items.ItemDefs.Get(ItemUser.UsingItem).UseStyle == Items.UseStyle.Swing;
+            m_Art.Show(new CharacterPose
+            {
+                Visible = hasArt, Alive = alive, Facing = Motor.Direction, Grounded = Motor.Grounded, Velocity = Motor.Velocity,
+                DoubleJumping = Motor.DoubleJumping, FastFalling = Motor.IsFastFalling, Sprinting = Abilities.RunSpeedScale > 1.01f,
+                Hit = Health.IsImmune, Drawing = bow.IsCharging, DrawFraction = bow.ChargeFraction, Released = bow.Active && bow.Released,
+                AimAngle = bow.AimAngle, Swinging = swinging,
+                SwingProgress = ItemUser.ItemAnimationMax > 0 ? 1f - ItemUser.ItemAnimation / (float)ItemUser.ItemAnimationMax : 0f,
+                TeamColor = TeamColors.For(Team), Tint = tint,
+            });
+
             UpdateHeldItem(alpha, alive);
             UpdateBow(alive);
             // Enemies can't see the orb: only the carrier and their team can.
@@ -673,15 +701,16 @@ namespace CTG.Gameplay
             // Facing left, mirror across the aim line so the bow isn't upside down.
             m_BowPivot.localScale = new Vector3(1f, bow.Direction, 1f);
 
-            // Bow 9·√2 px out along the aim; arrow nocked 16·√2 px out, pulled back up to 13 px by charge.
+            // Bow out along the aim (9·√2 px, or where the class art's hand grips it); arrow nocked 7·√2 px beyond the bow,
+            // pulled back up to 13 px by charge.
             const float px = 1f / SimUnits.PixelsPerTile;
             m_BowSprite.sprite = PlaceholderSprites.Bow(bow.Item.IconColor);
-            m_BowSprite.transform.localPosition = new Vector3(9f * 1.41421356f * px, 0f, 0f);
+            m_BowSprite.transform.localPosition = new Vector3(m_BowGripTiles, 0f, 0f);
 
             ChargeBowStats stats = bow.Item.ChargeBow;
             float pullback = Mathf.Lerp(0f, 13f, Mathf.Min(bow.Charge, stats.MaxCharge) / stats.MaxCharge);
             m_NockedArrow.sprite = PlaceholderSprites.Arrow(ProjectileDefs.Get(bow.Arrow).Color);
-            m_NockedArrow.transform.localPosition = new Vector3((16f * 1.41421356f - pullback) * px, 0f, 0f);
+            m_NockedArrow.transform.localPosition = new Vector3(m_BowGripTiles + (7f * 1.41421356f - pullback) * px, 0f, 0f);
 
             // At full charge the arrow alternates between slightly brighter and slightly dimmer every 200 ticks.
             Color tint = Color.white;

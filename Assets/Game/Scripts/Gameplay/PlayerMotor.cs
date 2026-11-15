@@ -134,6 +134,9 @@ namespace CTG.Gameplay
         /// <summary>The extra jump is currently rising.</summary>
         public bool DoubleJumping { get; private set; }
 
+        /// <summary>Holding down in the air with fast fall: falling with extra gravity this tick.</summary>
+        public bool IsFastFalling => FastFall != null && DropThrough && !Grounded && Liquid == LiquidType.None && Velocity.y <= 0f;
+
         int m_JumpTicksLeft;
         /// <summary>Being pulled downward by a hook: glass platforms don't catch the player.</summary>
         bool m_IgnorePlatforms;
@@ -346,7 +349,7 @@ namespace CTG.Gameplay
         {
             MovementStats s = Active;
             float gravity = s.Gravity;
-            if (FastFall != null && DropThrough && !Grounded && Liquid == LiquidType.None && Velocity.y <= 0f)
+            if (IsFastFalling)
             {
                 gravity *= FastFall.GravityMultiplier;
             }

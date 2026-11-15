@@ -1,0 +1,89 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 85751c7dd860d48628cb3dbcc41dd1cc, type: 3}
+  m_Name: Archer
+  m_EditorClassIdentifier: Assembly-CSharp::CTG.Rendering.ClassSpriteSet
+  Idle:
+  - {fileID: -765945885, guid: 606ed99b3ddb1447b9f5271e752ddce5, type: 3}
+  - {fileID: -223974267, guid: 606ed99b3ddb1447b9f5271e752ddce5, type: 3}
+  Run:
+  - {fileID: -60678172, guid: 606ed99b3ddb1447b9f5271e752ddce5, type: 3}
+  - {fileID: 138600774, guid: 606ed99b3ddb1447b9f5271e752ddce5, type: 3}
+  - {fileID: -798557316, guid: 606ed99b3ddb1447b9f5271e752ddce5, type: 3}
+  - {fileID: 918555603, guid: 606ed99b3ddb1447b9f5271e752ddce5, type: 3}
+  Sprint:
+  - {fileID: 1374530847, guid: 606ed99b3ddb1447b9f5271e752ddce5, type: 3}
+  - {fileID: 825573424, guid: 606ed99b3ddb1447b9f5271e752ddce5, type: 3}
+  Land:
+  - {fileID: 423101741, guid: 606ed99b3ddb1447b9f5271e752ddce5, type: 3}
+  JumpUp: []
+  Fall: []
+  DoubleJump:
+  - {fileID: -2135051312, guid: 606ed99b3ddb1447b9f5271e752ddce5, type: 3}
+  FastFall:
+  - {fileID: -1358728438, guid: 606ed99b3ddb1447b9f5271e752ddce5, type: 3}
+  Draw:
+  - {fileID: 1169741212, guid: 606ed99b3ddb1447b9f5271e752ddce5, type: 3}
+  - {fileID: 1559547425, guid: 606ed99b3ddb1447b9f5271e752ddce5, type: 3}
+  - {fileID: 1036721782, guid: 606ed99b3ddb1447b9f5271e752ddce5, type: 3}
+  DrawAir:
+  - {fileID: 1571835663, guid: 606ed99b3ddb1447b9f5271e752ddce5, type: 3}
+  - {fileID: -1068839096, guid: 606ed99b3ddb1447b9f5271e752ddce5, type: 3}
+  Release:
+  - {fileID: 1953503198, guid: 606ed99b3ddb1447b9f5271e752ddce5, type: 3}
+  RigBodyReady: {fileID: 1922552213, guid: 7a614099b4c8a4790b7db026b0c37f04, type: 3}
+  RigBodyBraced: {fileID: 476670220, guid: 7a614099b4c8a4790b7db026b0c37f04, type: 3}
+  RigBodyAirRising: {fileID: -349492693, guid: 7a614099b4c8a4790b7db026b0c37f04, type: 3}
+  RigBodyAirFalling: {fileID: -2014189737, guid: 7a614099b4c8a4790b7db026b0c37f04, type: 3}
+  NearUpperArm: {fileID: -2087705328, guid: 7a614099b4c8a4790b7db026b0c37f04, type: 3}
+  NearForearm: {fileID: -930114883, guid: 7a614099b4c8a4790b7db026b0c37f04, type: 3}
+  FarUpperArm: {fileID: -1830330095, guid: 7a614099b4c8a4790b7db026b0c37f04, type: 3}
+  FarForearm: {fileID: -1880206954, guid: 7a614099b4c8a4790b7db026b0c37f04, type: 3}
+  BowGripHand: {fileID: 812478792, guid: 7a614099b4c8a4790b7db026b0c37f04, type: 3}
+  StringPinchHand: {fileID: -2145973767, guid: 7a614099b4c8a4790b7db026b0c37f04, type: 3}
+  ReleaseHand: {fileID: -796542765, guid: 7a614099b4c8a4790b7db026b0c37f04, type: 3}
+  ReachingHand: {fileID: -1012087747, guid: 7a614099b4c8a4790b7db026b0c37f04, type: 3}
+  BowArm: 0
+  NearShoulderPx: {x: 6, y: 64}
+  FarShoulderPx: {x: -2, y: 66}
+  UpperArmLengthPx: 22
+  ForearmLengthPx: 22
+  BowElbowBend: 1
+  DrawElbowBend: -1
+  BowPivotPx: {x: 4, y: 62}
+  GripDistancePx: 36
+  StringRestPx: 34
+  StringFullPx: 6
+  QuiverPx: {x: -12, y: 80}
+  ReachFraction: 0.12
+  BraceAtCharge: 0.35
+  Swing:
+  - {fileID: -926296628, guid: 606ed99b3ddb1447b9f5271e752ddce5, type: 3}
+  - {fileID: 1129378869, guid: 606ed99b3ddb1447b9f5271e752ddce5, type: 3}
+  - {fileID: -159276916, guid: 606ed99b3ddb1447b9f5271e752ddce5, type: 3}
+  Hit:
+  - {fileID: 604304007, guid: 606ed99b3ddb1447b9f5271e752ddce5, type: 3}
+  Death:
+  - {fileID: -1231923862, guid: 606ed99b3ddb1447b9f5271e752ddce5, type: 3}
+  - {fileID: 49230609, guid: 606ed99b3ddb1447b9f5271e752ddce5, type: 3}
+  IdleFramesPerSecond: 6
+  RunFramesPerSecond: 12
+  SprintFramesPerSecond: 14
+  AirFramesPerSecond: 10
+  ReleaseFramesPerSecond: 16
+  HitFramesPerSecond: 12
+  DeathFramesPerSecond: 10
+  LandSeconds: 0.12
+  MinAirTimeForLanding: 0.2
+  OutlineThickness: 2
+  OutlineAlphaThreshold: 0.5
+  OutlineOpacity: 1

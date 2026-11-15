@@ -21,15 +21,21 @@ namespace CTG.Rendering
     /// Camera locked to the player's centre (no smoothing) and sized so that at 1920×1080
     /// and zoom 1 it shows 1080 / 16 = 67.5 tiles of height. Resolution and
     /// zoom can change at runtime through <see cref="DisplaySettings"/>; the size is recomputed whenever the
-    /// screen size or settings change.
+    /// screen size or settings change. The gameplay view is never wider than 16:9: on wider screens it is centred
+    /// with black bars either side, so an ultrawide monitor doesn't show more of the map.
     /// </summary>
     [RequireComponent(typeof(Camera))]
     [DefaultExecutionOrder(100)] // after the player has written its interpolated position
     public class CameraView : MonoBehaviour
     {
+        /// <summary>Widest gameplay view allowed (width / height).</summary>
+        public const float MaxAspect = 16f / 9f;
+
         Camera m_Camera;
+        Camera m_Bars;
         PlayerCharacter m_Target;
         int m_LastScreenHeight;
+        int m_LastScreenWidth;
         int m_LastSettingsVersion = -1;
 
         Vector2 m_WorldSizeTiles;
@@ -54,16 +60,47 @@ namespace CTG.Rendering
 
             float visibleTiles = pixelHeight / SimUnits.PixelsPerTile / zoom;
             m_Camera.orthographicSize = visibleTiles * 0.5f;
+            ApplyAspectCap();
 
             m_LastScreenHeight = Screen.height;
+            m_LastScreenWidth = Screen.width;
             m_LastSettingsVersion = DisplaySettings.Version;
+        }
+
+        /// <summary>Narrows the camera's viewport to 16:9 on wider screens; a second camera clears the bars to black.</summary>
+        void ApplyAspectCap()
+        {
+            float screenAspect = Screen.height > 0 ? (float)Screen.width / Screen.height : MaxAspect;
+            if (screenAspect <= MaxAspect + 0.001f)
+            {
+                m_Camera.rect = new Rect(0f, 0f, 1f, 1f);
+                if (m_Bars != null) m_Bars.enabled = false;
+                return;
+            }
+
+            float width = MaxAspect / screenAspect;
+            m_Camera.rect = new Rect((1f - width) * 0.5f, 0f, width, 1f);
+
+            if (m_Bars == null)
+            {
+                var go = new GameObject("Viewport Bars");
+                go.transform.SetParent(transform, false);
+                m_Bars = go.AddComponent<Camera>();
+                m_Bars.orthographic = true;
+                m_Bars.clearFlags = CameraClearFlags.SolidColor;
+                m_Bars.backgroundColor = Color.black;
+                m_Bars.cullingMask = 0;
+            }
+
+            m_Bars.depth = m_Camera.depth - 1f;
+            m_Bars.enabled = true;
         }
 
         void LateUpdate()
         {
             if (m_Camera == null) return;
 
-            if (Screen.height != m_LastScreenHeight || DisplaySettings.Version != m_LastSettingsVersion)
+            if (Screen.height != m_LastScreenHeight || Screen.width != m_LastScreenWidth || DisplaySettings.Version != m_LastSettingsVersion)
             {
                 Refresh();
             }
