@@ -10,6 +10,8 @@ using CTG.UI;
 using CTG.World;
 using UnityEngine;
 using UnityEngine.Tilemaps;
+using IdleInput = CTG.Input.IdleInput;
+using IInputSource = CTG.Input.IInputSource;
 using PlayerInput = CTG.Input.PlayerInput;
 
 namespace CTG
@@ -33,6 +35,8 @@ namespace CTG
         [Header("Testing")]
         [Tooltip("Tiles right of the player spawn where the target dummy stands.")]
         [SerializeField] int dummyOffsetTiles = 6;
+        [Tooltip("Testing: uncontrolled players added to each team (the local player is extra, on blue). 0 = none.")]
+        [SerializeField] int botsPerTeam;
 
         [SerializeField] Camera worldCamera;
 
@@ -68,36 +72,18 @@ namespace CTG
             var input = inputGo.AddComponent<PlayerInput>();
             input.SetCamera(worldCamera);
 
-            var playerGo = new GameObject("Player");
-            Player = playerGo.AddComponent<PlayerCharacter>();
-            // Spawn in the middle of the map, on the first surface found from the top.
-            int standRow, spawnColumn;
-            if (Map.BlueSpawn.HasValue)
+            // The local player plays for blue; test players (idle, uncontrolled) fill out each team.
+            Player = SpawnPlayer(Team.Blue, input, editor, true, "You", 0);
+            for (int i = 0; i < botsPerTeam; i++)
             {
-                // The map has spawn rooms: start on the floor of the blue room, a few tiles in from its left wall.
-                RectInt room = Map.BlueSpawn.Value;
-                spawnColumn = room.x + 3;
-                standRow = room.y - 1;
-            }
-            else
-            {
-                standRow = MapLoader.FindStandRow(Map, Map.CenterX, out spawnColumn);
+                SpawnPlayer(Team.Blue, new IdleInput(), editor, false, $"Blue bot {i + 1}", i + 1);
+                SpawnPlayer(Team.Red, new IdleInput(), editor, false, $"Red bot {i + 1}", i);
             }
 
-            if (standRow < 0) throw new System.InvalidOperationException($"Map '{Map.Name}' has nowhere to spawn.");
+            Vector2 spawn = Player.Motor.Position;
+            int spawnColumn = Mathf.RoundToInt((spawn.x + PlayerCharacter.HitboxWidthPx * 0.5f) / SimUnits.PixelsPerTile - 0.5f);
 
-            Vector2 spawn = StandPosition(spawnColumn, standRow, PlayerCharacter.HitboxWidthPx);
-            Player.Initialize(World, editor, input, spawn);
-            if (Map.BlueSpawn.HasValue)
-            {
-                RectInt room = Map.BlueSpawn.Value;
-                Player.HomeRoomPx = new Rect(room.x * SimUnits.PixelsPerTile, room.y * SimUnits.PixelsPerTile,
-                                             room.width * SimUnits.PixelsPerTile, room.height * SimUnits.PixelsPerTile);
-                // The player starts in the blue room, so they play for blue.
-                Player.Team = Team.Blue;
-            }
-
-            GemMatch gemMatch = GemMatch.Create(transform, Map, Player);
+            GemMatch gemMatch = GemMatch.Create(transform, Map);
             if (gemMatch != null)
             {
                 GemView.Create(transform, gemMatch);
@@ -115,7 +101,7 @@ namespace CTG
             KeybindMenuUi.Create(transform);
             ScoreboardUi.Create(transform);
 
-            MatchFlow matchFlow = MatchFlow.Create(transform, clock, Player, gemMatch);
+            MatchFlow matchFlow = MatchFlow.Create(transform, clock, gemMatch);
             if (gemMatch != null)
             {
                 Player.DevEndMatchRequested += gemMatch.DevEnd;
@@ -161,12 +147,56 @@ namespace CTG
             select.transform.SetParent(transform, false);
             select.Bind(chosen =>
             {
-                Player.SetClass(chosen);
-                Player.Inventory.Set(1, ItemId.DirtBlock, startingDirt);
-                if (startingWardBlocks > 0) Player.Inventory.Set(3, ItemId.WardBlock, startingWardBlocks);
+                foreach (PlayerCharacter p in PlayerRegistry.All)
+                {
+                    p.SetClass(chosen);
+                    p.Inventory.Set(1, ItemId.DirtBlock, startingDirt);
+                    if (startingWardBlocks > 0) p.Inventory.Set(3, ItemId.WardBlock, startingWardBlocks);
+                }
+
                 input.Consume(); // drop the click that chose the class
                 matchFlow.ClassChosen();
             });
+        }
+
+        /// <summary>
+        /// Creates a player on the given team, standing in that team's spawn room (or mid-map if the map has none).
+        /// <paramref name="slot"/> spreads players along the room so they don't stack.
+        /// </summary>
+        PlayerCharacter SpawnPlayer(Team team, IInputSource input, TileEditor editor, bool isLocal, string playerName, int slot)
+        {
+            var go = new GameObject($"Player {playerName}");
+            var player = go.AddComponent<PlayerCharacter>();
+            player.Team = team;
+            player.PlayerName = playerName;
+
+            RectInt? room = team == Team.Blue ? Map.BlueSpawn : Map.RedSpawn;
+            int column, standRow;
+            if (room.HasValue)
+            {
+                // On the floor of the room, a few tiles in from the wall (blue from its left, red from its right).
+                RectInt r = room.Value;
+                int offset = 3 + slot;
+                column = team == Team.Blue ? r.x + offset : r.xMax - 1 - offset;
+                column = Mathf.Clamp(column, r.x + 1, r.xMax - 2);
+                standRow = r.y - 1;
+            }
+            else
+            {
+                standRow = MapLoader.FindStandRow(Map, Map.CenterX, out column);
+            }
+
+            if (standRow < 0) throw new System.InvalidOperationException($"Map '{Map.Name}' has nowhere to spawn.");
+
+            player.Initialize(World, editor, input, StandPosition(column, standRow, PlayerCharacter.HitboxWidthPx), isLocal);
+            if (room.HasValue)
+            {
+                RectInt r = room.Value;
+                player.HomeRoomPx = new Rect(r.x * SimUnits.PixelsPerTile, r.y * SimUnits.PixelsPerTile,
+                                             r.width * SimUnits.PixelsPerTile, r.height * SimUnits.PixelsPerTile);
+            }
+
+            return player;
         }
 
         /// <summary>Hitbox bottom-left, centred on a tile column and standing on top of the given tile row.</summary>

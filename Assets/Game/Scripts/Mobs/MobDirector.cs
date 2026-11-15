@@ -116,11 +116,7 @@ namespace CTG.Mobs
             SpawnBoss();
 
             // Offerings are worthless after the shift: every player's are wiped.
-            var all = DamageableRegistry.All;
-            for (int i = 0; i < all.Count; i++)
-            {
-                if (all[i] is PlayerCharacter player) player.ClearOfferings(true);
-            }
+            foreach (PlayerCharacter player in PlayerRegistry.All) player.ClearOfferings(true);
         }
 
         /// <summary>The mid-boss appears on the mid platform at the Apex Shift.</summary>
@@ -137,7 +133,7 @@ namespace CTG.Mobs
 
                 MatchEconomy.Instance?.AwardBossKill(killer);
                 bool blue = killer.Team == Team.Blue;
-                m_Match.Announce($"Player has slain the Elder Drakon! The {(blue ? "blue" : "red")} team gains the Apex buff!", blue ? GemMatch.BlueMessage : GemMatch.RedMessage);
+                m_Match.Announce($"{killer.PlayerName} has slain the Elder Drakon! The {(blue ? "blue" : "red")} team gains the Apex buff!", blue ? GemMatch.BlueMessage : GemMatch.RedMessage);
             };
             m_Match.Announce("The Elder Drakon has awoken at mid!", Color.cyan);
         }
@@ -201,7 +197,7 @@ namespace CTG.Mobs
             if (killer != null)
             {
                 bool blue = killer.Team == Team.Blue;
-                m_Match.Announce($"Player has taken a {(slot.Mid ? "mid " : "")}Drakon's offering for the {(blue ? "blue" : "red")} team!", blue ? GemMatch.BlueMessage : GemMatch.RedMessage);
+                m_Match.Announce($"{killer.PlayerName} has taken a {(slot.Mid ? "mid " : "")}Drakon's offering for the {(blue ? "blue" : "red")} team!", blue ? GemMatch.BlueMessage : GemMatch.RedMessage);
             }
         }
 

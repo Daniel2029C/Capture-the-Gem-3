@@ -36,12 +36,25 @@ namespace CTG.Input
         public bool DevSkipOvertime;
     }
 
+    /// <summary>Where a player's controls come from each tick: the keyboard and mouse, a network client, or nothing.</summary>
+    public interface IInputSource
+    {
+        /// <summary>The controls for one simulation tick.</summary>
+        InputFrame Consume();
+    }
+
+    /// <summary>A player nobody controls: no keys, no cursor movement. Used for test players.</summary>
+    public sealed class IdleInput : IInputSource
+    {
+        public InputFrame Consume() => new InputFrame { HotbarKey = -1 };
+    }
+
     /// <summary>
     /// Reads the keyboard and mouse every rendered frame through <see cref="KeyBindings"/> and hands one
     /// <see cref="InputFrame"/> to each simulation tick. Presses are latched between ticks so a tap shorter than a
     /// tick is never lost. This is the seam a network layer would replace: ticks consume frames, not devices.
     /// </summary>
-    public class PlayerInput : MonoBehaviour
+    public class PlayerInput : MonoBehaviour, IInputSource
     {
         [SerializeField] Camera worldCamera;
         [Tooltip("Enables testing keys (end the match now, skip to overtime).")]

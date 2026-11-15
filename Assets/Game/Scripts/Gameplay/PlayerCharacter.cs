@@ -54,7 +54,7 @@ namespace CTG.Gameplay
 
         [Header("Testing")]
 
-        PlayerInput m_Input;
+        IInputSource m_Input;
         Vector2 m_SpawnPx;
         TileWorld m_World;
         SmartCursor m_SmartCursor;
@@ -77,11 +77,28 @@ namespace CTG.Gameplay
         public Purchases Purchases { get; } = new();
         /// <summary>Multipliers from artifacts, level and active effects, refreshed every tick.</summary>
         public PlayerModifiers Modifiers { get; private set; }
-        /// <summary>The player this client controls (the first one initialised). Used to decide what this client may see.</summary>
-        public static PlayerCharacter LocalPlayer { get; private set; }
+        /// <summary>Stable id from <see cref="PlayerRegistry"/>, unique within the match.</summary>
+        public int Id { get; private set; }
+        /// <summary>Shown in announcements and on the scoreboard.</summary>
+        public string PlayerName { get; set; }
+        /// <summary>Whether this client controls this player.</summary>
+        public bool IsLocal => PlayerRegistry.Local == this;
 
         /// <summary>Whether the local player may see this player's offering orb: their own, and their teammates'.</summary>
-        public bool OfferingVisibleToLocal => LocalPlayer == null || LocalPlayer == this || LocalPlayer.Team == Team;
+        public bool OfferingVisibleToLocal
+        {
+            get
+            {
+                PlayerCharacter local = PlayerRegistry.Local;
+                return local == null || local == this || local.Team == Team;
+            }
+        }
+
+        /// <summary>Gems this player has picked up and captured this match, for the end-of-match summary.</summary>
+        public int GemPickups { get; private set; }
+        public int GemCaptures { get; private set; }
+        public void AddGemPickup() => GemPickups++;
+        public void AddGemCapture() => GemCaptures++;
 
         /// <summary>Match statistics, shown on the scoreboard.</summary>
         public int Kills { get; private set; }
@@ -160,9 +177,11 @@ namespace CTG.Gameplay
         public Rect HitboxPx => new(Motor.Position.x, Motor.Position.y, Motor.Width, Motor.Height);
         public bool CanBeHit => Health != null && !Health.IsDead && !Health.IsImmune && !Effects.Aggregate().Invulnerable;
 
-        public void Initialize(TileWorld world, TileEditor tileEditor, PlayerInput input, Vector2 spawnPx)
+        /// <param name="isLocal">This client controls this player (the camera, HUD and shop follow it).</param>
+        public void Initialize(TileWorld world, TileEditor tileEditor, IInputSource input, Vector2 spawnPx, bool isLocal = false)
         {
-            if (LocalPlayer == null) LocalPlayer = this;
+            Id = PlayerRegistry.Add(this, isLocal);
+            if (string.IsNullOrEmpty(PlayerName)) PlayerName = $"Player {Id}";
             m_Input = input;
             m_World = world;
             m_TileEditor = tileEditor;
@@ -186,7 +205,7 @@ namespace CTG.Gameplay
 
         void OnDestroy()
         {
-            if (LocalPlayer == this) LocalPlayer = null;
+            PlayerRegistry.Remove(this);
             if (SimulationClock.Instance != null) SimulationClock.Instance.Unregister(this);
             DamageableRegistry.Unregister(this);
         }

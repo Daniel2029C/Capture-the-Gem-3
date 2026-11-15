@@ -42,17 +42,13 @@ namespace CTG.UI
             if (!KeyBindings.IsPressed(BindAction.Scoreboard)) return;
 
             m_Players.Clear();
-            var all = DamageableRegistry.All;
-            for (int i = 0; i < all.Count; i++)
-            {
-                if (all[i] is PlayerCharacter player) m_Players.Add(player);
-            }
+            m_Players.AddRange(PlayerRegistry.All);
 
             if (m_Players.Count == 0) return;
             EnsureStyles();
 
             // The local player's team first.
-            Team own = PlayerCharacter.LocalPlayer != null ? PlayerCharacter.LocalPlayer.Team : Team.Blue;
+            Team own = PlayerRegistry.Local != null ? PlayerRegistry.Local.Team : Team.Blue;
             Team other = own == Team.Blue ? Team.Red : Team.Blue;
 
             int rows = CountTeam(own) + CountTeam(other);
@@ -86,10 +82,10 @@ namespace CTG.UI
 
             foreach (PlayerCharacter p in members)
             {
-                bool local = p == PlayerCharacter.LocalPlayer;
+                bool local = p.IsLocal;
                 if (local) Fill(new Rect(panel.x, y, panel.width, k_RowHeight), new Color(1f, 1f, 1f, 0.1f));
 
-                string name = local ? "You" : $"Player {m_Players.IndexOf(p) + 1}";
+                string name = local ? "You" : p.PlayerName;
                 DrawColumns(panel, y, m_Cell, name, p.Class != null ? p.Class.Name : "-", p.Progress.Level.ToString(),
                             p.Kills.ToString(), p.Deaths.ToString(), p.Assists.ToString(), null);
 

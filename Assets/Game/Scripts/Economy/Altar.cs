@@ -89,11 +89,8 @@ namespace CTG.Economy
 
         public void Tick(int tick)
         {
-            var all = DamageableRegistry.All;
-            for (int i = 0; i < all.Count; i++)
-            {
-                if (all[i] is PlayerCharacter player) TickPlayer(player);
-            }
+            var all = PlayerRegistry.All;
+            for (int i = 0; i < all.Count; i++) TickPlayer(all[i]);
         }
 
         void TickPlayer(PlayerCharacter player)

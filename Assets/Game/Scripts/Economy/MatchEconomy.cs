@@ -60,10 +60,9 @@ namespace CTG.Economy
             if (killer == null) return;
 
             Give(killer, EconomyRules.BossLastHit, "Boss");
-            var all = Combat.DamageableRegistry.All;
-            for (int i = 0; i < all.Count; i++)
+            foreach (PlayerCharacter player in PlayerRegistry.All)
             {
-                if (all[i] is PlayerCharacter player && player.Team == killer.Team) player.Effects.Apply(Combat.StatusEffectDefs.Apex);
+                if (player.Team == killer.Team) player.Effects.Apply(Combat.StatusEffectDefs.Apex);
             }
         }
 

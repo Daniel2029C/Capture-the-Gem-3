@@ -12,7 +12,8 @@ namespace CTG.Gameplay
     /// pick it up (first to touch wins; only one carrier at a time), carries it to their own gem to capture
     /// it, and drops it by dying. The gem returns to its pedestal on capture. After ten minutes the match goes
     /// to overtime: a team wins once it leads on captures and the enemy isn't carrying its gem, or leads by
-    /// more than one capture. Until networking exists this runs on the local client against the local player.
+    /// more than one capture. It tracks every player in the <see cref="PlayerRegistry"/>; until networking exists it runs
+    /// on the local client.
     /// </summary>
     public class GemMatch : MonoBehaviour, ITickable
     {
@@ -27,15 +28,11 @@ namespace CTG.Gameplay
         public bool IsOvertime { get; private set; }
         public bool IsOver { get; private set; }
         public Team Winner { get; private set; }
-        /// <summary>This player's totals, for the end-of-match summary.</summary>
-        public int Pickups { get; private set; }
-        public int Captures { get; private set; }
         /// <summary>The latest announcement, shown for a few seconds.</summary>
         public string Message { get; private set; } = "";
         public Color MessageColor { get; private set; } = Color.cyan;
         public int MessageTicksLeft { get; private set; }
 
-        PlayerCharacter m_Player;
         bool m_ApexShifted;
 
         /// <summary>Raised once when regular time ends (10:00): barriers fall, and mobs and offerings go.</summary>
@@ -48,21 +45,20 @@ namespace CTG.Gameplay
         public static readonly Color BlueMessage = new Color32(0, 119, 182, 255);
         public static readonly Color RedMessage = new Color32(255, 0, 0, 255);
 
-        public static GemMatch Create(Transform parent, LoadedMap map, PlayerCharacter player)
+        public static GemMatch Create(Transform parent, LoadedMap map)
         {
             if (!map.BlueGem.HasValue || !map.RedGem.HasValue) return null;
 
             var go = new GameObject("Gem Match");
             go.transform.SetParent(parent, false);
             var match = go.AddComponent<GemMatch>();
-            match.m_Player = player;
             match.BlueGem = new Gem(Team.Blue, ToPx(map.BlueGem.Value));
             match.RedGem = new Gem(Team.Red, ToPx(map.RedGem.Value));
             match.BlueGem.Barrier = new GemBarrier(match.BlueGem);
             match.RedGem.Barrier = new GemBarrier(match.RedGem);
             match.BlueGem.Barrier.Broken += match.OnBarrierBroken;
             match.RedGem.Barrier.Broken += match.OnBarrierBroken;
-            // Registered after the player so this tick's pickups see the player's new position.
+            // Registered after the players so this tick's pickups see their new positions (create every player first).
             SimulationClock.Instance.Register(match);
             return match;
         }
@@ -82,7 +78,7 @@ namespace CTG.Gameplay
             if (breaker != null)
             {
                 MatchEconomy.Instance?.AwardBarrierBroken(breaker);
-                Announce($"Player has broken the {side} team's gem barrier!", barrier.Team == Team.Blue ? BlueMessage : RedMessage);
+                Announce($"{breaker.PlayerName} has broken the {side} team's gem barrier!", barrier.Team == Team.Blue ? BlueMessage : RedMessage);
             }
             else
             {
@@ -95,7 +91,7 @@ namespace CTG.Gameplay
 
         /// <summary>"At Base", or the carrier's name and life.</summary>
         public string CarrierText(Gem gem) =>
-            gem.IsHeld && gem.Holder != null ? $"Player: {gem.Holder.Health.Current}/{gem.Holder.Health.Max}" : "At Base";
+            gem.IsHeld && gem.Holder != null ? $"{gem.Holder.PlayerName}: {gem.Holder.Health.Current}/{gem.Holder.Health.Max}" : "At Base";
 
         /// <summary>How far a carried gem is toward the enemy base, 0..1 (0 when at its pedestal).</summary>
         public float Progress(Gem gem)
@@ -113,7 +109,7 @@ namespace CTG.Gameplay
         public void Tick(int tick)
         {
             if (MessageTicksLeft > 0) MessageTicksLeft--;
-            if (!Running || IsOver || m_Player == null || m_Player.Team == Team.Neutral) return;
+            if (!Running || IsOver) return;
 
             MatchTicks++;
             if (!m_ApexShifted && MatchTicks >= RegularTimeTicks)
@@ -124,7 +120,11 @@ namespace CTG.Gameplay
                 ApexShift?.Invoke();
             }
 
-            UpdatePlayer(m_Player);
+            var players = PlayerRegistry.All;
+            for (int i = 0; i < players.Count; i++)
+            {
+                if (players[i].Team != Team.Neutral) UpdatePlayer(players[i]);
+            }
 
             if (BlueGem.IsCaptured)
             {
@@ -168,8 +168,8 @@ namespace CTG.Gameplay
             {
                 enemy.IsHeld = true;
                 enemy.Holder = player;
-                Pickups++;
-                Announce($"Player has picked up the {enemyName} team's gem!", enemyColor);
+                player.AddGemPickup();
+                Announce($"{player.PlayerName} has picked up the {enemyName} team's gem!", enemyColor);
             }
 
             if (!enemy.IsHeld || enemy.Holder != player) return;
@@ -178,7 +178,7 @@ namespace CTG.Gameplay
             if (!alive)
             {
                 enemy.Reset();
-                Announce($"Player has dropped the {enemyName} team's gem!", enemyColor);
+                Announce($"{player.PlayerName} has dropped the {enemyName} team's gem!", enemyColor);
                 return;
             }
 
@@ -188,8 +188,8 @@ namespace CTG.Gameplay
                 enemy.IsCaptured = true;
                 enemy.IsHeld = false;
                 enemy.Holder = null;
-                Captures++;
-                Announce($"Player has captured the {enemyName} team's gem!", enemyColor);
+                player.AddGemCapture();
+                Announce($"{player.PlayerName} has captured the {enemyName} team's gem!", enemyColor);
             }
         }
 
@@ -213,7 +213,8 @@ namespace CTG.Gameplay
         {
             IsOver = true;
             Winner = winner;
-            Announce($"{(winner == Team.Blue ? "Blue" : "Red")} team wins!  Pickups {Pickups}, captures {Captures}", winner == Team.Blue ? BlueMessage : RedMessage);
+            PlayerCharacter local = PlayerRegistry.Local;
+            Announce($"{(winner == Team.Blue ? "Blue" : "Red")} team wins!  Pickups {local?.GemPickups ?? 0}, captures {local?.GemCaptures ?? 0}", winner == Team.Blue ? BlueMessage : RedMessage);
             MessageTicksLeft = int.MaxValue;
         }
 

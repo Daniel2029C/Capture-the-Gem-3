@@ -40,7 +40,6 @@ namespace CTG.Gameplay
         public const int CountdownTicks = 5 * SimUnits.TicksPerSecond;
 
         SimulationClock m_Clock;
-        PlayerCharacter m_Player;
         GemMatch m_Match;
 
         public MatchPhase Phase { get; private set; } = MatchPhase.ClassSelect;
@@ -51,12 +50,11 @@ namespace CTG.Gameplay
         public event Action<MatchResult> Finished;
 
         /// <param name="match">The gem objective, or null on a map without gems (the match then never ends on its own).</param>
-        public static MatchFlow Create(Transform parent, SimulationClock clock, PlayerCharacter player, GemMatch match)
+        public static MatchFlow Create(Transform parent, SimulationClock clock, GemMatch match)
         {
             var flow = new GameObject("Match Flow").AddComponent<MatchFlow>();
             flow.transform.SetParent(parent, false);
             flow.m_Clock = clock;
-            flow.m_Player = player;
             flow.m_Match = match;
             clock.Register(flow);
             return flow;
@@ -69,7 +67,7 @@ namespace CTG.Gameplay
 
             Phase = MatchPhase.Countdown;
             CountdownTicksLeft = CountdownTicks;
-            m_Player.InputLocked = true;
+            SetInputLocked(true);
             m_Clock.enabled = true;
         }
 
@@ -80,12 +78,18 @@ namespace CTG.Gameplay
             if (--CountdownTicksLeft > 0) return;
 
             Phase = MatchPhase.Playing;
-            m_Player.InputLocked = false;
+            SetInputLocked(false);
             if (m_Match != null)
             {
                 m_Match.Running = true;
                 m_Match.Announce("The match is starting!", Color.cyan);
             }
+        }
+
+        /// <summary>Locks or unlocks the controls of every player (countdown, results).</summary>
+        static void SetInputLocked(bool locked)
+        {
+            foreach (PlayerCharacter player in PlayerRegistry.All) player.InputLocked = locked;
         }
 
         void Update()
@@ -97,7 +101,7 @@ namespace CTG.Gameplay
             {
                 Winner = m_Match.Winner, BlueCaptures = m_Match.BlueCaptures, RedCaptures = m_Match.RedCaptures,
                 MatchTicks = m_Match.MatchTicks, WentToOvertime = m_Match.IsOvertime,
-                Pickups = m_Match.Pickups, Captures = m_Match.Captures,
+                Pickups = PlayerRegistry.Local?.GemPickups ?? 0, Captures = PlayerRegistry.Local?.GemCaptures ?? 0,
             };
 
             // Freeze the world under the results.
