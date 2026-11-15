@@ -20,7 +20,7 @@ namespace CTG.Gameplay
         {
             m_Gem = gem;
             Health = MaxHealth;
-            DamageableRegistry.Register(this);
+            MatchContext.Current.Damageables.Register(this);
         }
 
         /// <summary>The gem's team: that team can't damage its own barrier.</summary>
@@ -33,12 +33,12 @@ namespace CTG.Gameplay
         /// <summary>Raised when the barrier goes down: the player who broke it, or null when it fell by timer.</summary>
         public event Action<GemBarrier, PlayerCharacter> Broken;
 
-        public void Unregister() => DamageableRegistry.Unregister(this);
+        public void Unregister() => MatchContext.Current?.Damageables.Unregister(this);
 
         public void Reset()
         {
             Health = MaxHealth;
-            DamageableRegistry.Register(this);
+            MatchContext.Current.Damageables.Register(this);
         }
 
         public int ApplyHit(in HitInfo hit)

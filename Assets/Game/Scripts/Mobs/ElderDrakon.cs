@@ -85,16 +85,16 @@ namespace CTG.Mobs
             ring.sortingOrder = 8;
             ring.enabled = false;
             boss.m_ShockRing = ring;
-            DamageableRegistry.Register(boss);
-            SimulationClock.Instance.Register(boss);
+            MatchContext.Current.Damageables.Register(boss);
+            MatchContext.Current.Clock.Register(boss);
             return boss;
         }
 
         void OnDestroy()
         {
             if (m_ShockRing != null) Destroy(m_ShockRing.gameObject);
-            DamageableRegistry.Unregister(this);
-            if (SimulationClock.Instance != null) SimulationClock.Instance.Unregister(this);
+            MatchContext.Current?.Damageables.Unregister(this);
+            MatchContext.Current?.Clock?.Unregister(this);
         }
 
         public int ApplyHit(in HitInfo hit)
@@ -149,7 +149,7 @@ namespace CTG.Mobs
         {
             PlayerCharacter best = null;
             distance = float.MaxValue;
-            var all = DamageableRegistry.All;
+            var all = MatchContext.Current.Damageables.All;
             for (int i = 0; i < all.Count; i++)
             {
                 if (all[i] is not PlayerCharacter player || player.Health.IsDead) continue;
@@ -180,7 +180,7 @@ namespace CTG.Mobs
         void ReleaseShockwave()
         {
             m_NextShockTick = m_Age + k_ShockCooldownTicks;
-            var all = DamageableRegistry.All;
+            var all = MatchContext.Current.Damageables.All;
             for (int i = 0; i < all.Count; i++)
             {
                 if (all[i] is not PlayerCharacter player || !player.CanBeHit) continue;
@@ -193,7 +193,7 @@ namespace CTG.Mobs
 
         void TryVolley()
         {
-            if (m_Age < m_NextVolleyTick || ProjectileSystem.Instance == null) return;
+            if (m_Age < m_NextVolleyTick || MatchContext.Current.Projectiles == null) return;
 
             PlayerCharacter target = NearestPlayer(out float distance);
             if (target == null || distance > k_SightPx || !HasClearLine(CenterPx, target.Motor.Center)) return;
@@ -203,7 +203,7 @@ namespace CTG.Mobs
             for (int i = -1; i <= 1; i++)
             {
                 Vector2 direction = Quaternion.Euler(0f, 0f, i * k_VolleySpreadDegrees) * aim;
-                ProjectileSystem.Instance.Spawn(ProjectileId.Fireball, this, CenterPx, direction * k_VolleySpeed, k_VolleyDamage, k_VolleyKnockback, 0);
+                MatchContext.Current.Projectiles.Spawn(ProjectileId.Fireball, this, CenterPx, direction * k_VolleySpeed, k_VolleyDamage, k_VolleyKnockback, 0);
             }
         }
 

@@ -82,14 +82,14 @@ namespace CTG.Gameplay
         /// <summary>Shown in announcements and on the scoreboard.</summary>
         public string PlayerName { get; set; }
         /// <summary>Whether this client controls this player.</summary>
-        public bool IsLocal => PlayerRegistry.Local == this;
+        public bool IsLocal => MatchContext.LocalPlayer == this;
 
         /// <summary>Whether the local player may see this player's offering orb: their own, and their teammates'.</summary>
         public bool OfferingVisibleToLocal
         {
             get
             {
-                PlayerCharacter local = PlayerRegistry.Local;
+                PlayerCharacter local = MatchContext.LocalPlayer;
                 return local == null || local == this || local.Team == Team;
             }
         }
@@ -180,7 +180,7 @@ namespace CTG.Gameplay
         /// <param name="isLocal">This client controls this player (the camera, HUD and shop follow it).</param>
         public void Initialize(TileWorld world, TileEditor tileEditor, IInputSource input, Vector2 spawnPx, bool isLocal = false)
         {
-            Id = PlayerRegistry.Add(this, isLocal);
+            Id = MatchContext.Current.Players.Add(this, isLocal);
             if (string.IsNullOrEmpty(PlayerName)) PlayerName = $"Player {Id}";
             m_Input = input;
             m_World = world;
@@ -199,15 +199,15 @@ namespace CTG.Gameplay
             Purchases.Reset();
 
             BuildVisuals();
-            SimulationClock.Instance.Register(this);
-            DamageableRegistry.Register(this);
+            MatchContext.Current.Clock.Register(this);
+            MatchContext.Current.Damageables.Register(this);
         }
 
         void OnDestroy()
         {
-            PlayerRegistry.Remove(this);
-            if (SimulationClock.Instance != null) SimulationClock.Instance.Unregister(this);
-            DamageableRegistry.Unregister(this);
+            MatchContext.Current?.Players.Remove(this);
+            MatchContext.Current?.Clock?.Unregister(this);
+            MatchContext.Current?.Damageables.Unregister(this);
         }
 
         void OnValidate()
@@ -521,7 +521,7 @@ namespace CTG.Gameplay
         /// <summary>Reports a death caused by an enemy player to the economy: the killer, and anyone who damaged us recently.</summary>
         void CreditKill(PlayerCharacter killer)
         {
-            if (killer != null && killer != this && killer.Team != Team && MatchEconomy.Instance != null)
+            if (killer != null && killer != this && killer.Team != Team && MatchContext.Current.Economy != null)
             {
                 int window = SimUnits.SecondsToTicks(EconomyRules.AssistWindowSeconds);
                 var assisters = new System.Collections.Generic.List<PlayerCharacter>();
@@ -530,7 +530,7 @@ namespace CTG.Gameplay
                     if (entry.Key != killer && m_CurrentTick - entry.Value <= window) assisters.Add(entry.Key);
                 }
 
-                MatchEconomy.Instance.RecordKill(killer, this, assisters);
+                MatchContext.Current.Economy.RecordKill(killer, this, assisters);
             }
 
             m_Attackers.Clear();
@@ -629,7 +629,7 @@ namespace CTG.Gameplay
         {
             if (Motor == null) return;
 
-            float alpha = SimulationClock.Instance != null ? SimulationClock.Instance.Alpha : 1f;
+            float alpha = MatchContext.RenderAlpha;
             Vector2 px = Motor.GetVisualPosition(alpha);
             transform.position = new Vector3((px.x + Motor.Width * 0.5f) / SimUnits.PixelsPerTile,
                                              px.y / SimUnits.PixelsPerTile, 0f);

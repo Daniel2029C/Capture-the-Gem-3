@@ -12,12 +12,8 @@ namespace CTG.Economy
     /// </summary>
     public sealed class MatchEconomy
     {
-        public static MatchEconomy Instance { get; private set; }
-
         bool m_FirstKillGiven;
         bool m_FirstBarrierGiven;
-
-        public MatchEconomy() => Instance = this;
 
         /// <param name="killer">The player who dealt the killing blow.</param>
         /// <param name="victim">The player who died, still carrying the streak and deaths they had when killed.</param>
@@ -60,7 +56,7 @@ namespace CTG.Economy
             if (killer == null) return;
 
             Give(killer, EconomyRules.BossLastHit, "Boss");
-            foreach (PlayerCharacter player in PlayerRegistry.All)
+            foreach (PlayerCharacter player in MatchContext.Current.Players.All)
             {
                 if (player.Team == killer.Team) player.Effects.Apply(Combat.StatusEffectDefs.Apex);
             }

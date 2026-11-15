@@ -163,7 +163,7 @@ namespace CTG.Gameplay
         {
             m_ThrowReadyTick = tick + def.UseDelayTicks;
 
-            ProjectileSystem projectiles = ProjectileSystem.Instance;
+            ProjectileSystem projectiles = MatchContext.Current.Projectiles;
             if (projectiles == null) return;
 
             Vector2 aim = cursorPx - motor.Center;
@@ -182,7 +182,7 @@ namespace CTG.Gameplay
             float angle = MeleeSwing.Angle(ItemAnimation, ItemAnimationMax, def.Swing);
             Rect swing = MeleeSwing.Hitbox(ownerBox, UseDirection, angle, def.SwingLengthPx, def.Swing);
 
-            IReadOnlyList<IDamageable> targets = DamageableRegistry.All;
+            IReadOnlyList<IDamageable> targets = MatchContext.Current.Damageables.All;
             for (int i = 0; i < targets.Count; i++)
             {
                 IDamageable target = targets[i];

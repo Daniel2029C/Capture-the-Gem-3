@@ -97,7 +97,7 @@ namespace CTG.Rendering
             aura.Root.gameObject.SetActive(show);
             if (!show) return;
 
-            float alpha = SimulationClock.Instance != null ? SimulationClock.Instance.Alpha : 1f;
+            float alpha = MatchContext.RenderAlpha;
             Vector2 px = gem.Holder.Motor.GetVisualPosition(alpha);
             carried.position = new Vector3((px.x + gem.Holder.Motor.Width * 0.5f) / SimUnits.PixelsPerTile,
                                            (px.y + gem.Holder.Motor.Height + 22f) / SimUnits.PixelsPerTile, 0f);

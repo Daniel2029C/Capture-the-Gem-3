@@ -51,14 +51,14 @@ namespace CTG.Combat
             m_Sprite.sprite = PlaceholderSprites.Dummy(24, 48);
             m_Sprite.sortingOrder = 9;
 
-            DamageableRegistry.Register(this);
-            SimulationClock.Instance.Register(this);
+            MatchContext.Current.Damageables.Register(this);
+            MatchContext.Current.Clock.Register(this);
         }
 
         void OnDestroy()
         {
-            DamageableRegistry.Unregister(this);
-            if (SimulationClock.Instance != null) SimulationClock.Instance.Unregister(this);
+            MatchContext.Current?.Damageables.Unregister(this);
+            MatchContext.Current?.Clock?.Unregister(this);
         }
 
         public int ApplyHit(in HitInfo hit)

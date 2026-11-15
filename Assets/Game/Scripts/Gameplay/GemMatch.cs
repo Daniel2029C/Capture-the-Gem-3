@@ -59,7 +59,7 @@ namespace CTG.Gameplay
             match.BlueGem.Barrier.Broken += match.OnBarrierBroken;
             match.RedGem.Barrier.Broken += match.OnBarrierBroken;
             // Registered after the players so this tick's pickups see their new positions (create every player first).
-            SimulationClock.Instance.Register(match);
+            MatchContext.Current.Clock.Register(match);
             return match;
         }
 
@@ -77,7 +77,7 @@ namespace CTG.Gameplay
             string side = barrier.Team == Team.Blue ? "blue" : "red";
             if (breaker != null)
             {
-                MatchEconomy.Instance?.AwardBarrierBroken(breaker);
+                MatchContext.Current.Economy.AwardBarrierBroken(breaker);
                 Announce($"{breaker.PlayerName} has broken the {side} team's gem barrier!", barrier.Team == Team.Blue ? BlueMessage : RedMessage);
             }
             else
@@ -120,7 +120,7 @@ namespace CTG.Gameplay
                 ApexShift?.Invoke();
             }
 
-            var players = PlayerRegistry.All;
+            var players = MatchContext.Current.Players.All;
             for (int i = 0; i < players.Count; i++)
             {
                 if (players[i].Team != Team.Neutral) UpdatePlayer(players[i]);
@@ -213,7 +213,7 @@ namespace CTG.Gameplay
         {
             IsOver = true;
             Winner = winner;
-            PlayerCharacter local = PlayerRegistry.Local;
+            PlayerCharacter local = MatchContext.LocalPlayer;
             Announce($"{(winner == Team.Blue ? "Blue" : "Red")} team wins!  Pickups {local?.GemPickups ?? 0}, captures {local?.GemCaptures ?? 0}", winner == Team.Blue ? BlueMessage : RedMessage);
             MessageTicksLeft = int.MaxValue;
         }

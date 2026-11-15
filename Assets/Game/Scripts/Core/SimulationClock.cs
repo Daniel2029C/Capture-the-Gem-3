@@ -20,11 +20,8 @@ namespace CTG.Core
     {
         const float k_MaxFrameTime = 0.25f;
 
-        static SimulationClock s_Instance;
         readonly List<ITickable> m_Tickables = new();
         float m_Accumulator;
-
-        public static SimulationClock Instance => s_Instance;
 
         /// <summary>Ticks simulated since start.</summary>
         public int CurrentTick { get; private set; }
@@ -32,23 +29,7 @@ namespace CTG.Core
         /// <summary>0..1 fraction of the way from the previous tick to the next, for interpolation.</summary>
         public float Alpha { get; private set; }
 
-        public static event System.Action BeforeTick;
-
-        void Awake()
-        {
-            if (s_Instance != null && s_Instance != this)
-            {
-                Destroy(this);
-                return;
-            }
-
-            s_Instance = this;
-        }
-
-        void OnDestroy()
-        {
-            if (s_Instance == this) s_Instance = null;
-        }
+        public event System.Action BeforeTick;
 
         public void Register(ITickable tickable)
         {

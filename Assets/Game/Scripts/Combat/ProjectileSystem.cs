@@ -54,9 +54,6 @@ namespace CTG.Combat
     {
         const int k_ExplosionVisualTicks = 10;
 
-        static ProjectileSystem s_Instance;
-        public static ProjectileSystem Instance => s_Instance;
-
         /// <summary>A projectile ran into a solid tile: the contact point (px) and the tile struck.</summary>
         public event System.Action<Vector2, TileId> TileStruck;
 
@@ -87,14 +84,12 @@ namespace CTG.Combat
         public void Initialize(TileWorld world)
         {
             m_World = world;
-            s_Instance = this;
-            SimulationClock.Instance.Register(this);
+            MatchContext.Current.Clock.Register(this);
         }
 
         void OnDestroy()
         {
-            if (s_Instance == this) s_Instance = null;
-            if (SimulationClock.Instance != null) SimulationClock.Instance.Unregister(this);
+            MatchContext.Current?.Clock?.Unregister(this);
         }
 
         public Projectile Spawn(ProjectileId id, IDamageable owner, Vector2 centerPx, Vector2 velocity,
@@ -293,7 +288,7 @@ namespace CTG.Combat
         void HitBoomerangTargets(Projectile p, BoomerangStats b)
         {
             Rect box = p.HitboxPx;
-            IReadOnlyList<IDamageable> targets = DamageableRegistry.All;
+            IReadOnlyList<IDamageable> targets = MatchContext.Current.Damageables.All;
             for (int i = 0; i < targets.Count; i++)
             {
                 IDamageable target = targets[i];
@@ -319,7 +314,7 @@ namespace CTG.Combat
         void HitTargets(Projectile p)
         {
             Rect box = p.HitboxPx;
-            IReadOnlyList<IDamageable> targets = DamageableRegistry.All;
+            IReadOnlyList<IDamageable> targets = MatchContext.Current.Damageables.All;
             for (int i = 0; i < targets.Count && p.Penetrate != 0; i++)
             {
                 IDamageable target = targets[i];
@@ -362,7 +357,7 @@ namespace CTG.Combat
             var blast = new Rect(center.x - size * 0.5f, center.y - size * 0.5f, size, size);
             m_Blasts.Add(new Blast { RectPx = blast, TicksLeft = k_ExplosionVisualTicks });
 
-            IReadOnlyList<IDamageable> targets = DamageableRegistry.All;
+            IReadOnlyList<IDamageable> targets = MatchContext.Current.Damageables.All;
             for (int i = 0; i < targets.Count; i++)
             {
                 IDamageable target = targets[i];
@@ -380,7 +375,7 @@ namespace CTG.Combat
 
         void LateUpdate()
         {
-            float alpha = SimulationClock.Instance != null ? SimulationClock.Instance.Alpha : 1f;
+            float alpha = MatchContext.RenderAlpha;
 
             EnsureViews(m_ProjectileViews, m_Projectiles.Count, 12);
             for (int i = 0; i < m_ProjectileViews.Count; i++)

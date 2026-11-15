@@ -89,7 +89,7 @@ namespace CTG.Gameplay
         /// <summary>Locks or unlocks the controls of every player (countdown, results).</summary>
         static void SetInputLocked(bool locked)
         {
-            foreach (PlayerCharacter player in PlayerRegistry.All) player.InputLocked = locked;
+            foreach (PlayerCharacter player in MatchContext.Current.Players.All) player.InputLocked = locked;
         }
 
         void Update()
@@ -101,7 +101,7 @@ namespace CTG.Gameplay
             {
                 Winner = m_Match.Winner, BlueCaptures = m_Match.BlueCaptures, RedCaptures = m_Match.RedCaptures,
                 MatchTicks = m_Match.MatchTicks, WentToOvertime = m_Match.IsOvertime,
-                Pickups = PlayerRegistry.Local?.GemPickups ?? 0, Captures = PlayerRegistry.Local?.GemCaptures ?? 0,
+                Pickups = MatchContext.LocalPlayer?.GemPickups ?? 0, Captures = MatchContext.LocalPlayer?.GemCaptures ?? 0,
             };
 
             // Freeze the world under the results.

@@ -110,7 +110,7 @@ namespace CTG.Gameplay
         {
             var rect = new Rect(tile.x * SimUnits.PixelsPerTile, tile.y * SimUnits.PixelsPerTile,
                                 SimUnits.PixelsPerTile, SimUnits.PixelsPerTile);
-            IReadOnlyList<IDamageable> all = DamageableRegistry.All;
+            IReadOnlyList<IDamageable> all = MatchContext.Current.Damageables.All;
             for (int i = 0; i < all.Count; i++)
             {
                 if (rect.Overlaps(all[i].HitboxPx)) return true;

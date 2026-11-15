@@ -42,7 +42,7 @@ namespace CTG.Economy
             altar.PositionPx = bottomCenterPx;
             altar.BuildVisuals();
             s_All.Add(altar);
-            SimulationClock.Instance.Register(altar);
+            MatchContext.Current.Clock.Register(altar);
             return altar;
         }
 
@@ -73,7 +73,7 @@ namespace CTG.Economy
         void OnDestroy()
         {
             s_All.Remove(this);
-            if (SimulationClock.Instance != null) SimulationClock.Instance.Unregister(this);
+            MatchContext.Current?.Clock?.Unregister(this);
         }
 
         /// <summary>The altar's reach, px.</summary>
@@ -89,7 +89,7 @@ namespace CTG.Economy
 
         public void Tick(int tick)
         {
-            var all = PlayerRegistry.All;
+            var all = MatchContext.Current.Players.All;
             for (int i = 0; i < all.Count; i++) TickPlayer(all[i]);
         }
 
@@ -110,7 +110,7 @@ namespace CTG.Economy
             }
 
             m_Progress.Remove(player);
-            if (player.TakeOffering()) MatchEconomy.Instance?.AwardOffering(player, Kind);
+            if (player.TakeOffering()) MatchContext.Current.Economy.AwardOffering(player, Kind);
         }
 
         /// <summary>Alive, allowed to use this altar, carrying an offering, within reach and standing still.</summary>

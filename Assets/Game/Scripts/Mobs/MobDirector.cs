@@ -81,7 +81,7 @@ namespace CTG.Mobs
             }
 
             match.ApexShift += director.OnApexShift;
-            SimulationClock.Instance.Register(director);
+            MatchContext.Current.Clock.Register(director);
             return director;
         }
 
@@ -99,7 +99,7 @@ namespace CTG.Mobs
         void OnDestroy()
         {
             if (m_Match != null) m_Match.ApexShift -= OnApexShift;
-            if (SimulationClock.Instance != null) SimulationClock.Instance.Unregister(this);
+            MatchContext.Current?.Clock?.Unregister(this);
         }
 
         void OnApexShift()
@@ -116,7 +116,7 @@ namespace CTG.Mobs
             SpawnBoss();
 
             // Offerings are worthless after the shift: every player's are wiped.
-            foreach (PlayerCharacter player in PlayerRegistry.All) player.ClearOfferings(true);
+            foreach (PlayerCharacter player in MatchContext.Current.Players.All) player.ClearOfferings(true);
         }
 
         /// <summary>The mid-boss appears on the mid platform at the Apex Shift.</summary>
@@ -131,7 +131,7 @@ namespace CTG.Mobs
                 m_BossRespawnAt = m_Match.MatchTicks + BossRespawnTicks;
                 if (killer == null) return;
 
-                MatchEconomy.Instance?.AwardBossKill(killer);
+                MatchContext.Current.Economy.AwardBossKill(killer);
                 bool blue = killer.Team == Team.Blue;
                 m_Match.Announce($"{killer.PlayerName} has slain the Elder Drakon! The {(blue ? "blue" : "red")} team gains the Apex buff!", blue ? GemMatch.BlueMessage : GemMatch.RedMessage);
             };
@@ -191,7 +191,7 @@ namespace CTG.Mobs
 
             // A side Drakon returns 45 seconds after it died; mid Drakons keep their fixed schedule.
             if (!slot.Mid) slot.SpawnAt = m_Match.MatchTicks + RespawnTicks;
-            MatchEconomy.Instance?.AwardMobKill(killer);
+            MatchContext.Current.Economy.AwardMobKill(killer);
 
             // Everyone is told which team took the offering (not where it is), so carriers can be tracked.
             if (killer != null)

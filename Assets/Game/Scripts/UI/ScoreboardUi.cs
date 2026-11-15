@@ -42,13 +42,13 @@ namespace CTG.UI
             if (!KeyBindings.IsPressed(BindAction.Scoreboard)) return;
 
             m_Players.Clear();
-            m_Players.AddRange(PlayerRegistry.All);
+            m_Players.AddRange(MatchContext.Current.Players.All);
 
             if (m_Players.Count == 0) return;
             EnsureStyles();
 
             // The local player's team first.
-            Team own = PlayerRegistry.Local != null ? PlayerRegistry.Local.Team : Team.Blue;
+            Team own = MatchContext.LocalPlayer != null ? MatchContext.LocalPlayer.Team : Team.Blue;
             Team other = own == Team.Blue ? Team.Red : Team.Blue;
 
             int rows = CountTeam(own) + CountTeam(other);

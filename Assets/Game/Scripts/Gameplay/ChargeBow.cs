@@ -162,7 +162,7 @@ namespace CTG.Gameplay
         {
             if (Kit == null || IsCharging || Kit.LuminiteArmed || tick < m_LockedUntilTick || !Kit.CanFireLight(tick)) return false;
 
-            ProjectileSystem projectiles = ProjectileSystem.Instance;
+            ProjectileSystem projectiles = MatchContext.Current.Projectiles;
             if (projectiles == null) return false;
 
             ArcherStats stats = Kit.Stats;
@@ -180,7 +180,7 @@ namespace CTG.Gameplay
 
         void Fire(int tick, ItemDef item, ChargeBowStats stats, bool primary, PlayerMotor motor)
         {
-            ProjectileSystem projectiles = ProjectileSystem.Instance;
+            ProjectileSystem projectiles = MatchContext.Current.Projectiles;
             if (projectiles == null) return;
 
             float charge = Mathf.Min(Charge, stats.MaxCharge);

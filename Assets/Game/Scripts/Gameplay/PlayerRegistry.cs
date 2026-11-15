@@ -3,52 +3,58 @@ using System.Collections.Generic;
 namespace CTG.Gameplay
 {
     /// <summary>
-    /// Every player in the match, with a stable id each, and which one this client controls. Systems that act on
+    /// Every player in the match (one registry per match, see <see cref="MatchContext"/>), with a stable id each, and which one this client controls. Systems that act on
     /// "the players" (the gem objective, match flow, the scoreboard) read it instead of holding a player of their own.
     /// Ids start at 1, are never reused during a match, and are what a network layer will use to name a player.
     /// </summary>
-    public static class PlayerRegistry
+    public sealed class PlayerRegistry
     {
-        static readonly List<PlayerCharacter> s_All = new();
-        static int s_NextId = 1;
+        readonly List<PlayerCharacter> m_All = new();
+        int m_NextId = 1;
 
         /// <summary>All players, in the order they joined.</summary>
-        public static IReadOnlyList<PlayerCharacter> All => s_All;
+        public IReadOnlyList<PlayerCharacter> All => m_All;
 
         /// <summary>The player this client controls, or null. It decides what this client may see (teammates' offering orbs).</summary>
-        public static PlayerCharacter Local { get; private set; }
+        public PlayerCharacter Local { get; private set; }
 
-        /// <summary>Adds a player and returns its id. <paramref name="isLocal"/> marks the one this client controls.</summary>
-        public static int Add(PlayerCharacter player, bool isLocal)
+        public void Clear()
         {
-            if (!s_All.Contains(player)) s_All.Add(player);
-            if (isLocal) Local = player;
-            return s_NextId++;
+            m_All.Clear();
+            Local = null;
         }
 
-        public static void Remove(PlayerCharacter player)
+        /// <summary>Adds a player and returns its id. <paramref name="isLocal"/> marks the one this client controls.</summary>
+        public int Add(PlayerCharacter player, bool isLocal)
         {
-            s_All.Remove(player);
+            if (!m_All.Contains(player)) m_All.Add(player);
+            if (isLocal) Local = player;
+            return m_NextId++;
+        }
+
+        public void Remove(PlayerCharacter player)
+        {
+            m_All.Remove(player);
             if (Local == player) Local = null;
         }
 
-        public static PlayerCharacter Get(int id)
+        public PlayerCharacter Get(int id)
         {
-            for (int i = 0; i < s_All.Count; i++)
+            for (int i = 0; i < m_All.Count; i++)
             {
-                if (s_All[i].Id == id) return s_All[i];
+                if (m_All[i].Id == id) return m_All[i];
             }
 
             return null;
         }
 
         /// <summary>Players on the given team.</summary>
-        public static int CountOnTeam(Combat.Team team)
+        public int CountOnTeam(Combat.Team team)
         {
             int count = 0;
-            for (int i = 0; i < s_All.Count; i++)
+            for (int i = 0; i < m_All.Count; i++)
             {
-                if (s_All[i].Team == team) count++;
+                if (m_All[i].Team == team) count++;
             }
 
             return count;

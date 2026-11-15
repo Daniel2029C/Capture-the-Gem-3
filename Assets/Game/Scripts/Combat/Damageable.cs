@@ -13,20 +13,23 @@ namespace CTG.Combat
         int ApplyHit(in HitInfo hit);
     }
 
-    /// <summary>All live hittable entities, for attacks to test against.</summary>
-    public static class DamageableRegistry
+    /// <summary>All live hittable entities, for attacks to test against. One per match (see <see cref="MatchContext"/>).</summary>
+    public sealed class DamageableRegistry
     {
-        static readonly List<IDamageable> s_All = new();
+        readonly List<IDamageable> m_All = new();
 
-        public static IReadOnlyList<IDamageable> All => s_All;
+        public IReadOnlyList<IDamageable> All => m_All;
 
-        public static void Register(IDamageable target)
+        public void Register(IDamageable target)
         {
-            if (!s_All.Contains(target)) s_All.Add(target);
+            if (!m_All.Contains(target)) m_All.Add(target);
         }
 
-        public static void Unregister(IDamageable target) => s_All.Remove(target);
+        public void Unregister(IDamageable target) => m_All.Remove(target);
 
+        public void Clear() => m_All.Clear();
+
+        /// <summary>Whether an attack by <paramref name="a"/> may hit <paramref name="b"/>: never itself, otherwise by team.</summary>
         public static bool AreHostile(IDamageable a, IDamageable b)
         {
             if (a == b) return false;

@@ -70,8 +70,8 @@ namespace CTG.Mobs
             drakon.m_Waypoint = centerPx;
             drakon.m_NextShotTick = k_FirstShotDelayTicks;
             drakon.BuildVisuals();
-            DamageableRegistry.Register(drakon);
-            SimulationClock.Instance.Register(drakon);
+            MatchContext.Current.Damageables.Register(drakon);
+            MatchContext.Current.Clock.Register(drakon);
             return drakon;
         }
 
@@ -97,8 +97,8 @@ namespace CTG.Mobs
 
         void OnDestroy()
         {
-            DamageableRegistry.Unregister(this);
-            if (SimulationClock.Instance != null) SimulationClock.Instance.Unregister(this);
+            MatchContext.Current?.Damageables.Unregister(this);
+            MatchContext.Current?.Clock?.Unregister(this);
         }
 
         public int ApplyHit(in HitInfo hit)
@@ -197,7 +197,7 @@ namespace CTG.Mobs
 
         void TryShoot()
         {
-            if (m_Age < m_NextShotTick || ProjectileSystem.Instance == null) return;
+            if (m_Age < m_NextShotTick || MatchContext.Current.Projectiles == null) return;
 
             PlayerCharacter target = NearestTarget(out float distance);
             if (target == null || distance > k_SightPx) return;
@@ -206,14 +206,14 @@ namespace CTG.Mobs
             if (!HasClearLine(m_Center, target.Motor.Center)) return;
 
             m_NextShotTick = m_Age + k_FireIntervalTicks;
-            ProjectileSystem.Instance.Spawn(ProjectileId.Fireball, this, m_Center, aim.normalized * k_FireballSpeed, FireballDamage, k_FireballKnockback, 0);
+            MatchContext.Current.Projectiles.Spawn(ProjectileId.Fireball, this, m_Center, aim.normalized * k_FireballSpeed, FireballDamage, k_FireballKnockback, 0);
         }
 
         PlayerCharacter NearestTarget(out float distance)
         {
             PlayerCharacter best = null;
             distance = float.MaxValue;
-            var all = DamageableRegistry.All;
+            var all = MatchContext.Current.Damageables.All;
             for (int i = 0; i < all.Count; i++)
             {
                 if (all[i] is not PlayerCharacter player || !player.CanBeHit) continue;

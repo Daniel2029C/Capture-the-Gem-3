@@ -30,7 +30,7 @@ namespace CTG.Rendering
             GrapplingHooks hooks = m_Player != null && m_Player.Motor != null ? m_Player.Hooks : null;
             int hookCount = hooks != null ? hooks.Count : 0;
 
-            float alpha = SimulationClock.Instance != null ? SimulationClock.Instance.Alpha : 1f;
+            float alpha = MatchContext.RenderAlpha;
             PlayerMotor motor = m_Player != null ? m_Player.Motor : null;
             Vector2 playerCenter = motor != null
                 ? motor.GetVisualPosition(alpha) + new Vector2(motor.Width * 0.5f, motor.Height * 0.5f)
