@@ -4,26 +4,22 @@ using CTG.Core;
 using CTG.Economy;
 using CTG.Input;
 using CTG.Items;
-using CTG.Rendering;
-using CTG.UI;
 using CTG.World;
 using UnityEngine;
 
 namespace CTG.Gameplay
 {
     /// <summary>
-    /// The local player: owns the motor, health, inventory and item use, steps them on the simulation
-    /// clock, and draws the result interpolated between ticks. Order per tick: hotbar selection and item
-    /// use (including melee hits), then movement, then health (regeneration, immunity, respawn) and mana.
+    /// A player: owns the motor, health, inventory and item use and steps them on the simulation clock. Order per
+    /// tick: hotbar selection and item use (including melee hits), then movement, then health (regeneration,
+    /// immunity, respawn) and mana. How it looks is <see cref="Rendering.PlayerView"/>'s job; this class never draws.
     /// </summary>
     public class PlayerCharacter : MonoBehaviour, ITickable, IDamageable
     {
-        // The sprite is 3 tiles (48 px) tall. The hitbox is 2 px shorter so 3-tile-tall tunnels can be
+        // The character is drawn 3 tiles (48 px) tall. The hitbox is 2 px shorter so 3-tile-tall tunnels can be
         // entered mid-air with a little room to spare.
         public const int HitboxWidthPx = 22;
         public const int HitboxHeightPx = 46;
-        const int k_SpriteWidthPx = 24;
-        const int k_SpriteHeightPx = 48;
 
         [SerializeField] MovementStats movement = MovementStats.Default;
 
@@ -59,18 +55,6 @@ namespace CTG.Gameplay
         TileWorld m_World;
         SmartCursor m_SmartCursor;
         int m_LavaCooldown;
-        Team m_BodyTeam = Team.Neutral;
-        SpriteRenderer m_Body;
-        /// <summary>The class's character art when it has some; otherwise the placeholder body is drawn.</summary>
-        CharacterSprite m_Art;
-        /// <summary>How far out along the aim the drawn bow sits, in tiles: where the class art's hand grips it, or the default.</summary>
-        float m_BowGripTiles = 9f * 1.41421356f / SimUnits.PixelsPerTile;
-        Transform m_HeldItemPivot;
-        SpriteRenderer m_HeldItem;
-        Transform m_BowPivot;
-        SpriteRenderer m_BowSprite;
-        SpriteRenderer m_NockedArrow;
-        SpriteRenderer m_OfferingMarker;
 
         public PlayerMotor Motor { get; private set; }
         public Health Health { get; private set; }
@@ -132,7 +116,7 @@ namespace CTG.Gameplay
         /// <summary>Loses every offering (death, or the Apex Shift wipe).</summary>
         public void ClearOfferings(bool announce)
         {
-            if (Offerings > 0 && announce) CombatText.Spawn(Motor.Center + new Vector2(0f, 40f), "Offerings lost", CombatText.PlayerDamaged);
+            if (Offerings > 0 && announce) Presentation?.ShowText(Motor.Center + new Vector2(0f, 40f), "Offerings lost", TextKind.PlayerDamage);
             Offerings = 0;
         }
 
@@ -199,10 +183,9 @@ namespace CTG.Gameplay
             Mana = new Mana(0, manaRegenPerSecond);
             Inventory = new Inventory();
             ItemUser = new ItemUser(Inventory, tileEditor, this) { CanMineTile = CanMineTile };
-            Progress.LeveledUp += level => CombatText.Spawn(Motor.Center + new Vector2(0f, 56f), $"Level {level}!", CombatText.Healed);
+            Progress.LeveledUp += level => Presentation?.ShowText(Motor.Center + new Vector2(0f, 56f), $"Level {level}!", TextKind.Heal);
             Purchases.Reset();
 
-            BuildVisuals();
             MatchContext.Current.Clock.Register(this);
             MatchContext.Current.Damageables.Register(this);
         }
@@ -262,14 +245,6 @@ namespace CTG.Gameplay
             Effects.ClearAll();
             ShopOpen = false;
 
-            ClassSpriteSet art = ClassSpriteSet.For(def.Id);
-            m_Art.SetSpriteSet(art);
-            // With class art, the bow sits where the art's hands hold it; otherwise at the hitbox centre.
-            bool hasArt = art != null && art.HasFrames;
-            m_BowPivot.localPosition = hasArt
-                ? (Vector3)(art.BowPivotPx / ClassSpriteSet.PixelsPerUnit)
-                : new Vector3(0f, HitboxHeightPx * 0.5f / SimUnits.PixelsPerTile, 0f);
-            m_BowGripTiles = hasArt ? art.GripDistancePx / ClassSpriteSet.PixelsPerUnit : 9f * 1.41421356f / SimUnits.PixelsPerTile;
             Kit = def.CreateKit?.Invoke();
             ItemUser.Bow.Kit = Archer;
             ItemUser.MiningSpeedMultiplier = def.Stats.MiningSpeedMultiplier;
@@ -282,54 +257,11 @@ namespace CTG.Gameplay
             for (int i = 0; i < Inventory.SlotCount; i++) Inventory.Set(i, ItemId.None, 0);
             foreach (LoadoutEntry entry in def.Loadout) Inventory.Set(entry.Slot, entry.Item, entry.Count);
             Inventory.Select(0);
+            ClassChanged?.Invoke(def);
         }
 
-        void BuildVisuals()
-        {
-            m_Body = gameObject.AddComponent<SpriteRenderer>();
-            m_BodyTeam = Team;
-            m_Body.sprite = PlaceholderSprites.Player(k_SpriteWidthPx, k_SpriteHeightPx, TeamColors.For(Team));
-            m_Body.sortingOrder = 10;
-            m_Art = CharacterSprite.Create(transform, 10);
-
-            var pivot = new GameObject("Held Item");
-            m_HeldItemPivot = pivot.transform;
-            m_HeldItemPivot.SetParent(transform, false);
-            m_HeldItemPivot.localPosition = SwingProfile.Overhead.HandOffsetPx / SimUnits.PixelsPerTile;
-
-            var item = new GameObject("Sprite");
-            item.transform.SetParent(m_HeldItemPivot, false);
-            m_HeldItem = item.AddComponent<SpriteRenderer>();
-            m_HeldItem.sortingOrder = 11;
-            m_HeldItem.enabled = false;
-
-            // Drawn bow: pivots on the body centre and turns to the aim.
-            m_BowPivot = new GameObject("Bow").transform;
-            m_BowPivot.SetParent(transform, false);
-            m_BowPivot.localPosition = new Vector3(0f, HitboxHeightPx * 0.5f / SimUnits.PixelsPerTile, 0f);
-
-            m_BowSprite = new GameObject("Bow Sprite").AddComponent<SpriteRenderer>();
-            m_BowSprite.transform.SetParent(m_BowPivot, false);
-            m_BowSprite.sortingOrder = 12;
-            m_BowSprite.enabled = false;
-
-            m_NockedArrow = new GameObject("Nocked Arrow").AddComponent<SpriteRenderer>();
-            m_NockedArrow.transform.SetParent(m_BowPivot, false);
-            m_NockedArrow.sortingOrder = 13;
-            m_NockedArrow.enabled = false;
-
-            // A glowing orb above the head while carrying an offering, so enemies can see who to hunt.
-            m_OfferingMarker = new GameObject("Offering Marker").AddComponent<SpriteRenderer>();
-            m_OfferingMarker.transform.SetParent(transform, false);
-            m_OfferingMarker.transform.localPosition = new Vector3(0f, (k_SpriteHeightPx + 10f) / SimUnits.PixelsPerTile, 0f);
-            m_OfferingMarker.sprite = PlaceholderSprites.Solid("offering_orb", new Color32(255, 215, 90, 255), 8, 8);
-            m_OfferingMarker.sortingOrder = 14;
-            m_OfferingMarker.enabled = false;
-
-            var hookView = new GameObject("Grapple Hooks").AddComponent<GrappleHookView>();
-            hookView.transform.SetParent(transform, false);
-            hookView.Bind(this);
-        }
+        /// <summary>Raised after the player takes a class; views use it to switch to that class's art.</summary>
+        public event System.Action<ClassDef> ClassChanged;
 
         public void Tick(int tick)
         {
@@ -480,12 +412,12 @@ namespace CTG.Gameplay
             if (cast == SpellId.HealingPotion)
             {
                 int healed = Health.Heal(k_HealingPotionAmount);
-                CombatText.Spawn(Motor.Center, $"+{healed}", CombatText.Healed);
+                Presentation?.ShowText(Motor.Center, $"+{healed}", TextKind.Heal);
             }
             else
             {
                 Effects.Apply(StatusEffectDefs.Endurance);
-                CombatText.Spawn(Motor.Center, "Endurance", CombatText.Healed);
+                Presentation?.ShowText(Motor.Center, "Endurance", TextKind.Heal);
             }
         }
 
@@ -497,11 +429,11 @@ namespace CTG.Gameplay
             int tx = Mathf.FloorToInt(Motor.Center.x / SimUnits.PixelsPerTile);
             int ty = Mathf.FloorToInt((Motor.Position.y - 1f) / SimUnits.PixelsPerTile);
             TileId below = m_World.Get(tx, ty);
-            if (!ParticleView.IsDirt(below)) return;
+            if (!PresentationEvents.ShedsDirt(below)) return;
 
             // Chips spray backwards, away from the direction of travel.
             var feet = new Vector2(Motor.Center.x, Motor.Position.y + 1f);
-            ParticleView.DirtBurst(feet, below, 2, new Vector2(-Mathf.Sign(Motor.Velocity.x), 1.2f), 70f);
+            Presentation?.SprayDirt(feet, below, 2, new Vector2(-Mathf.Sign(Motor.Velocity.x), 1.2f), 70f);
         }
 
         public int ApplyHit(in HitInfo hit)
@@ -515,7 +447,7 @@ namespace CTG.Gameplay
             int dealt = Health.TakeDamage(damage, DamageFlags.None, hit.Source);
             if (dealt <= 0) return 0;
 
-            CombatText.Spawn(Motor.Center, dealt.ToString(), CombatText.PlayerDamaged);
+            Presentation?.ShowText(Motor.Center, dealt.ToString(), TextKind.PlayerDamage);
             if (Health.IsDead) return dealt;
 
             var attacker = hit.Source as PlayerCharacter;
@@ -577,7 +509,7 @@ namespace CTG.Gameplay
             if (Class != null) foreach (Mobility feature in Class.Mobilities) feature.OnDeath(this);
             ItemUser.Cancel();
             Motor.Velocity = Vector2.zero;
-            CombatText.Spawn(Motor.Center + new Vector2(0f, 24f), "You died", CombatText.PlayerDamaged);
+            Presentation?.ShowText(Motor.Center + new Vector2(0f, 24f), "You died", TextKind.PlayerDamage);
         }
 
         /// <summary>Width of the part of the hitbox, centred on it, that counts as touching nectar, px.</summary>
@@ -616,7 +548,7 @@ namespace CTG.Gameplay
             int damage = CombatRules.ComputeDamage(lavaDamage, Defense);
             int dealt = Health.TakeDamage(damage, DamageFlags.Environmental);
             m_LavaCooldown = lavaHitCooldownTicks;
-            CombatText.Spawn(Motor.Center, dealt.ToString(), CombatText.PlayerDamaged);
+            Presentation?.ShowText(Motor.Center, dealt.ToString(), TextKind.PlayerDamage);
 
             // Dying in lava is handled by OnHealthDied; a dead player does not start burning.
             if (Health.IsDead) return;
@@ -638,116 +570,7 @@ namespace CTG.Gameplay
             Mana.Refill();
         }
 
-        void LateUpdate()
-        {
-            if (Motor == null) return;
-
-            float alpha = MatchContext.RenderAlpha;
-            Vector2 px = Motor.GetVisualPosition(alpha);
-            transform.position = new Vector3((px.x + Motor.Width * 0.5f) / SimUnits.PixelsPerTile,
-                                             px.y / SimUnits.PixelsPerTile, 0f);
-
-            bool alive = !Health.IsDead;
-            m_Body.enabled = alive;
-            m_Body.flipX = Motor.Direction < 0;
-            if (m_BodyTeam != Team)
-            {
-                m_BodyTeam = Team;
-                m_Body.sprite = PlaceholderSprites.Player(k_SpriteWidthPx, k_SpriteHeightPx, TeamColors.For(Team));
-            }
-
-            // Burning flickers orange; blink while immune after a hit.
-            Color tint = Color.white;
-            if (Effects.Has(StatusEffectDefs.Burning)) tint = Color.Lerp(Color.white, new Color(1f, 0.5f, 0.15f), 0.55f + 0.25f * Mathf.Sin(Time.time * 18f));
-            if (Health.IsImmune && (Time.frameCount / 4) % 2 == 0) tint.a = 0.4f;
-            m_Body.color = tint;
-
-            // Class art, when it exists, replaces the placeholder body (with its team outline as a separate layer).
-            bool hasArt = m_Art.HasArt;
-            if (hasArt) m_Body.enabled = false;
-            ChargeBow bow = ItemUser.Bow;
-            bool swinging = ItemUser.ItemAnimation > 0 && !bow.Active && Items.ItemDefs.Get(ItemUser.UsingItem).UseStyle == Items.UseStyle.Swing;
-            m_Art.Show(new CharacterPose
-            {
-                Visible = hasArt, Alive = alive, Facing = Motor.Direction, Grounded = Motor.Grounded, Velocity = Motor.Velocity,
-                DoubleJumping = Motor.DoubleJumping, FastFalling = Motor.IsFastFalling, Sprinting = Abilities.RunSpeedScale > 1.01f,
-                Hit = Health.IsImmune, Drawing = bow.IsCharging, DrawFraction = bow.ChargeFraction, Released = bow.Active && bow.Released,
-                AimAngle = bow.AimAngle, Swinging = swinging,
-                SwingProgress = ItemUser.ItemAnimationMax > 0 ? 1f - ItemUser.ItemAnimation / (float)ItemUser.ItemAnimationMax : 0f,
-                TeamColor = TeamColors.For(Team), Tint = tint,
-            });
-
-            UpdateHeldItem(alpha, alive);
-            UpdateBow(alive);
-            // Enemies can't see the orb: only the carrier and their team can.
-            m_OfferingMarker.enabled = alive && Offerings > 0 && OfferingVisibleToLocal;
-            if (m_OfferingMarker.enabled)
-            {
-                float pulse = 1f + 0.2f * Mathf.Sin(Time.time * 6f);
-                m_OfferingMarker.transform.localScale = Vector3.one * pulse * (1f + 0.25f * (Mathf.Min(Offerings, 4) - 1));
-            }
-        }
-
-        void UpdateBow(bool alive)
-        {
-            ChargeBow bow = ItemUser.Bow;
-            bool drawn = alive && bow.Active && bow.Item != null;
-            m_BowSprite.enabled = drawn;
-            m_NockedArrow.enabled = drawn && !bow.Released;
-            if (!drawn) return;
-
-            float angle = bow.AimAngle * Mathf.Rad2Deg;
-            m_BowPivot.localRotation = Quaternion.Euler(0f, 0f, angle);
-            // Facing left, mirror across the aim line so the bow isn't upside down.
-            m_BowPivot.localScale = new Vector3(1f, bow.Direction, 1f);
-
-            // Bow out along the aim (9·√2 px, or where the class art's hand grips it); arrow nocked 7·√2 px beyond the bow,
-            // pulled back up to 13 px by charge.
-            const float px = 1f / SimUnits.PixelsPerTile;
-            m_BowSprite.sprite = PlaceholderSprites.Bow(bow.Item.IconColor);
-            m_BowSprite.transform.localPosition = new Vector3(m_BowGripTiles, 0f, 0f);
-
-            ChargeBowStats stats = bow.Item.ChargeBow;
-            float pullback = Mathf.Lerp(0f, 13f, Mathf.Min(bow.Charge, stats.MaxCharge) / stats.MaxCharge);
-            m_NockedArrow.sprite = PlaceholderSprites.Arrow(ProjectileDefs.Get(bow.Arrow).Color);
-            m_NockedArrow.transform.localPosition = new Vector3(m_BowGripTiles + (7f * 1.41421356f - pullback) * px, 0f, 0f);
-
-            // At full charge the arrow alternates between slightly brighter and slightly dimmer every 200 ticks.
-            Color tint = Color.white;
-            if (bow.FullyCharged)
-            {
-                tint = bow.FullChargeTicks % 400 <= 200
-                    ? Color.Lerp(tint, Color.white, 0.2f)
-                    : Color.Lerp(tint, new Color32(150, 150, 150, 255), 0.2f);
-            }
-
-            m_NockedArrow.color = tint;
-        }
-
-        void UpdateHeldItem(float alpha, bool alive)
-        {
-            ItemDef def = ItemDefs.Get(ItemUser.UsingItem);
-            bool swinging = alive && ItemUser.IsUsing && def.UseStyle == UseStyle.Swing;
-            m_HeldItem.enabled = swinging;
-            if (!swinging) return;
-
-            if (def.IsPickaxe)
-            {
-                m_HeldItem.sprite = PlaceholderSprites.Pickaxe(def.IconColor);
-                // The placeholder sprite is 16 px; scale it to the item's real reach so the visual matches hits.
-                m_HeldItem.transform.localScale = Vector3.one * (def.SwingLengthPx / SimUnits.PixelsPerTile);
-            }
-            else
-            {
-                m_HeldItem.sprite = PlaceholderSprites.Square($"icon_{def.Id}", def.IconColor, 8);
-                m_HeldItem.transform.localScale = Vector3.one;
-            }
-
-            float angle = MeleeSwing.Angle(ItemUser.ItemAnimation - alpha, ItemUser.ItemAnimationMax, def.Swing);
-            int direction = ItemUser.UseDirection;
-            m_HeldItemPivot.localPosition = def.Swing.HandOffsetPx / SimUnits.PixelsPerTile;
-            m_HeldItemPivot.localScale = new Vector3(direction, 1f, 1f);
-            m_HeldItemPivot.localRotation = Quaternion.Euler(0f, 0f, angle * direction);
-        }
+        /// <summary>Where this player's floating text and particles go; null when no match is running.</summary>
+        static PresentationEvents Presentation => MatchContext.Current?.Presentation;
     }
 }

@@ -26,6 +26,9 @@ namespace CTG
         public DamageableRegistry Damageables { get; } = new();
         public PlayerRegistry Players { get; } = new();
 
+        /// <summary>Floating text and particle requests from the simulation; the client's views subscribe to draw them.</summary>
+        public PresentationEvents Presentation { get; } = new();
+
         /// <summary>The player this client controls, or null (no match, or none is local).</summary>
         public static PlayerCharacter LocalPlayer => Current?.Players.Local;
 

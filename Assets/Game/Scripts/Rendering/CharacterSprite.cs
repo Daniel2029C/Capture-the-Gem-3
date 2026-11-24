@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using CTG.Core;
 using UnityEngine;
 
 namespace CTG.Rendering
@@ -30,6 +31,8 @@ namespace CTG.Rendering
         /// <summary>Swinging a pickaxe or placing a block, with the swing's progress 0..1.</summary>
         public bool Swinging;
         public float SwingProgress;
+        /// <summary>The swung item's angle this instant, degrees (0 = pointing forward, positive = up); the arm follows it.</summary>
+        public float SwingAngle;
         public Color TeamColor;
         /// <summary>Body tint (burning flicker, hit-immunity blink); its alpha also fades the outline.</summary>
         public Color Tint;
@@ -148,6 +151,7 @@ namespace CTG.Rendering
         // animation state
         int m_StateKey = NoState;
         float m_StateTime;
+        float m_RunPhase;
         float m_AirTime;
         float m_LandTimeLeft;
         bool m_WasAlive = true;
@@ -163,10 +167,14 @@ namespace CTG.Rendering
         Transform m_Rig;
         Part m_NearUpper, m_NearFore, m_FarUpper, m_FarFore, m_GripHand, m_DrawHand;
 
-        readonly Dictionary<(int, int, Color32), Sprite> m_Composed = new();
+        readonly Dictionary<(int, int, int, Color32), Sprite> m_Composed = new();
         readonly Dictionary<(Sprite, int, float), Sprite> m_OutlineCache = new();
 
         public bool HasArt => m_Set != null && m_Outfit != null;
+
+        /// <summary>True while the arm is swinging an item: <see cref="SwingHandWorld"/> is where its hand grips it.</summary>
+        public bool SwingRigActive { get; private set; }
+        public Vector3 SwingHandWorld { get; private set; }
 
         public static CharacterSprite Create(Transform parent, int unusedSortingOrder = BodyOrder)
         {
@@ -200,6 +208,7 @@ namespace CTG.Rendering
             ClearCaches();
             m_StateKey = NoState;
             m_StateTime = 0f;
+            m_RunPhase = 0f;
             if (!HasArt) HideAll();
         }
 
@@ -226,6 +235,7 @@ namespace CTG.Rendering
             m_WasAlive = pose.Alive;
             if (!pose.Visible || !pose.Alive)
             {
+                m_RunPhase = 0f;
                 HideAll();
                 return;
             }
@@ -233,9 +243,24 @@ namespace CTG.Rendering
             SnapToPixelGrid();
             TrackLanding(pose);
 
-            bool useRig = (pose.Drawing || pose.Released) && !pose.Hit && !pose.Swinging && HasRig;
+            float speed = Mathf.Abs(pose.Velocity.x);
+            bool striding = pose.Grounded && speed > RunSpeedThreshold && m_Set.RunCycleDistancePx > 0f;
+            if (striding)
+                m_RunPhase = Mathf.Repeat(m_RunPhase + speed * SimUnits.TicksPerSecond * Time.deltaTime / m_Set.RunCycleDistancePx, 1f);
+            else
+                m_RunPhase = 0f;
+
+            // The jointed arms are used for the bow and, when the class has the rig, for swinging an item: the arm turns with
+            // the item and the hand stays on its grip (frame-by-frame Swing art is only the fallback without a rig).
+            SwingRigActive = false;
+            bool swingRig = pose.Swinging && !pose.Hit && HasRig;
+            bool useRig = swingRig || ((pose.Drawing || pose.Released) && !pose.Hit && !pose.Swinging && HasRig);
             (int row, int col) cell = useRig ? RigBody(pose) : PickFrame(pose);
-            Sprite frame = cell.row < 0 ? null : Composed(cell.row, cell.col, pose.TeamColor);
+            int legs = striding && m_Set.ActionLegsHeightPx > 0 && Count(CharacterSheet.Row.Run) > 0
+                       && (useRig || cell.row == (int)CharacterSheet.Row.Swing)
+                ? GroundStrideColumn(CharacterSheet.Row.Run)
+                : -1;
+            Sprite frame = cell.row < 0 ? null : Composed(cell.row, cell.col, pose.TeamColor, legs);
             if (frame == null)
             {
                 HideAll();
@@ -303,11 +328,11 @@ namespace CTG.Rendering
         }
 
         /// <summary>The cell with every layer stacked (base body, outfit, team mask in the team's colour), cached.</summary>
-        Sprite Composed(int row, int col, Color teamColor)
+        Sprite Composed(int row, int col, Color teamColor, int runLegs = -1)
         {
             Color32 team = teamColor;
             team.a = 255;
-            var key = (row, col, m_Mask != null ? team : default);
+            var key = (row, col, runLegs, m_Mask != null ? team : default);
             if (m_Composed.TryGetValue(key, out Sprite cached)) return cached;
 
             Sprite sprite = null;
@@ -319,6 +344,15 @@ namespace CTG.Rendering
                 m_Base?.DrawOver(px, row, col, white);
                 m_Outfit.DrawOver(px, row, col, white);
                 m_Mask?.DrawOver(px, row, col, team);
+                if (runLegs >= 0)
+                {
+                    int run = (int)CharacterSheet.Row.Run;
+                    var runPixels = new Color32[px.Length];
+                    m_Base?.DrawOver(runPixels, run, runLegs, white);
+                    m_Outfit.DrawOver(runPixels, run, runLegs, white);
+                    m_Mask?.DrawOver(runPixels, run, runLegs, team);
+                    System.Array.Copy(runPixels, px, w * Mathf.Clamp(m_Set.ActionLegsHeightPx, 0, h));
+                }
 
                 var tex = new Texture2D(w, h, TextureFormat.RGBA32, false)
                 {
@@ -353,6 +387,8 @@ namespace CTG.Rendering
         // ---- frame picking ----
 
         CharacterSheet.Row Or(CharacterSheet.Row a, CharacterSheet.Row b) => Count(a) > 0 ? a : b;
+
+        int GroundStrideColumn(CharacterSheet.Row row) => Mathf.FloorToInt(m_RunPhase * Count(row));
 
         (int, int) PickFrame(in CharacterPose pose)
         {
@@ -390,8 +426,11 @@ namespace CTG.Rendering
 
             if (Mathf.Abs(pose.Velocity.x) > RunSpeedThreshold && Count(CharacterSheet.Row.Run) > 0)
             {
-                if (pose.Sprinting && Count(CharacterSheet.Row.Sprint) > 0) return Play(CharacterSheet.Row.Sprint, Mode.Loop, s.SprintFramesPerSecond, 0f);
-                return Play(CharacterSheet.Row.Run, Mode.Loop, s.RunFramesPerSecond, 0f);
+                bool sprint = pose.Sprinting && Count(CharacterSheet.Row.Sprint) > 0;
+                CharacterSheet.Row row = sprint ? CharacterSheet.Row.Sprint : CharacterSheet.Row.Run;
+                if (s.RunCycleDistancePx > 0f)
+                    return ((int)row, GroundStrideColumn(row));
+                return Play(row, Mode.Loop, sprint ? s.SprintFramesPerSecond : s.RunFramesPerSecond, 0f);
             }
 
             return Play(idle, Mode.Loop, s.IdleFramesPerSecond, 0f);
@@ -494,6 +533,11 @@ namespace CTG.Rendering
             float ppu = ClassSpriteSet.PixelsPerUnit;
             int facing = pose.Facing < 0 ? -1 : 1;
             m_Rig.localScale = new Vector3(facing, 1f, 1f);
+            if (pose.Swinging)
+            {
+                PoseSwing(pose, outlineColor);
+                return;
+            }
 
             float aim = facing > 0 ? pose.AimAngle : Mathf.PI - pose.AimAngle;   // aim as seen in the rig's right-facing space
             var dir = new Vector2(Mathf.Cos(aim), Mathf.Sin(aim));
@@ -528,6 +572,35 @@ namespace CTG.Rendering
 
             PlacePart(m_GripHand, RigPart(CharacterSheet.RigPart.BowGripHand, team), grip, aimDeg, pose.Tint, outlineColor);
             PlacePart(m_DrawHand, drawHand, drawTarget, aimDeg, pose.Tint, outlineColor);
+        }
+
+        /// <summary>
+        /// Swinging an item: the near arm turns with the item, reaching out along its angle, and its fist stays on the grip
+        /// at every point of the swing (<see cref="SwingHandWorld"/> is where the item's pivot goes). The far arm hangs
+        /// relaxed at the side. The rig faces right here; the rig is mirrored for facing left.
+        /// </summary>
+        void PoseSwing(in CharacterPose pose, Color outlineColor)
+        {
+            ClassSpriteSet s = m_Set;
+            float ppu = ClassSpriteSet.PixelsPerUnit;
+            Color team = pose.TeamColor;
+            Vector2 nearShoulder = s.NearShoulderPx / ppu, farShoulder = s.FarShoulderPx / ppu;
+            float upper = s.UpperArmLengthPx / ppu, fore = s.ForearmLengthPx / ppu;
+
+            float armRad = pose.SwingAngle * Mathf.Deg2Rad;
+            Vector2 hand = nearShoulder + new Vector2(Mathf.Cos(armRad), Mathf.Sin(armRad)) * ((upper + fore) * s.SwingReach);
+            Vector2 farRest = farShoulder + new Vector2(0.1f, -(upper + fore) * 0.8f);
+
+            PoseArm(m_FarUpper, m_FarFore, RigPart(CharacterSheet.RigPart.FarUpperArm, team), RigPart(CharacterSheet.RigPart.FarForearm, team),
+                    farShoulder, farRest, upper, fore, s.DrawElbowBend, pose.Tint, outlineColor);
+            PoseArm(m_NearUpper, m_NearFore, RigPart(CharacterSheet.RigPart.NearUpperArm, team), RigPart(CharacterSheet.RigPart.NearForearm, team),
+                    nearShoulder, hand, upper, fore, s.BowElbowBend, pose.Tint, outlineColor);
+
+            PlacePart(m_GripHand, RigPart(CharacterSheet.RigPart.BowGripHand, team), hand, pose.SwingAngle, pose.Tint, outlineColor);
+            PlacePart(m_DrawHand, RigPart(CharacterSheet.RigPart.StringPinchHand, team), farRest, -90f, pose.Tint, outlineColor);
+
+            SwingRigActive = true;
+            SwingHandWorld = m_Rig.TransformPoint(new Vector3(hand.x, hand.y, 0f));
         }
 
         void PoseArm(Part upperPart, Part forePart, Sprite upperSprite, Sprite foreSprite, Vector2 shoulder, Vector2 target,

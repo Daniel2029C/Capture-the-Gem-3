@@ -98,8 +98,9 @@ namespace CTG
 
             // Dirt chips fly when dirt blocks are mined away (and, in BuildProjectiles, when projectiles strike dirt).
             ParticleView.Create(transform);
+            EffectsPresenter.Attach(m_Context.Presentation);
             m_Editor.TileBroken += (tile, id) =>
-                ParticleView.DirtBurst((new Vector2(tile.x, tile.y) + new Vector2(0.5f, 0.5f)) * SimUnits.PixelsPerTile, id, 10, Vector2.up, 120f);
+                m_Context.Presentation.SprayDirt((new Vector2(tile.x, tile.y) + new Vector2(0.5f, 0.5f)) * SimUnits.PixelsPerTile, id, 10, Vector2.up, 120f);
 
             CreateWorldRenderer();
         }
@@ -163,7 +164,7 @@ namespace CTG
             projectiles.transform.SetParent(transform, false);
             m_Context.Projectiles = projectiles;
             projectiles.Initialize(World);
-            projectiles.TileStruck += (point, id) => ParticleView.DirtBurst(point, id, 6, Vector2.up, 100f);
+            projectiles.TileStruck += (point, id) => m_Context.Presentation.SprayDirt(point, id, 6, Vector2.up, 100f);
         }
 
         void BuildCameraAndCursor()
@@ -247,6 +248,7 @@ namespace CTG
             if (standRow < 0) throw new System.InvalidOperationException($"Map '{Map.Name}' has nowhere to spawn.");
 
             player.Initialize(World, editor, input, StandPosition(column, standRow, PlayerCharacter.HitboxWidthPx), isLocal);
+            PlayerView.Create(player);
             if (room.HasValue)
             {
                 RectInt r = room.Value;

@@ -1,0 +1,1007 @@
+fileFormatVersion: 2
+guid: 8a8031c1bb5994e39a8bca484ca11c73
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: -5495750903819848919
+    second: ArcherOutfit_0
+  - first:
+      213: -4284934892506138124
+    second: ArcherOutfit_1
+  - first:
+      213: 8888448782163287648
+    second: ArcherOutfit_2
+  - first:
+      213: -5342359492012354450
+    second: ArcherOutfit_3
+  - first:
+      213: 8273177805656485441
+    second: ArcherOutfit_4
+  - first:
+      213: 4432512332166931301
+    second: ArcherOutfit_5
+  - first:
+      213: -7645059125120683817
+    second: ArcherOutfit_6
+  - first:
+      213: -941930143684705345
+    second: ArcherOutfit_7
+  - first:
+      213: 450521589594241221
+    second: ArcherOutfit_8
+  - first:
+      213: 1667710538635971288
+    second: ArcherOutfit_9
+  - first:
+      213: -3334882474527164097
+    second: ArcherOutfit_10
+  - first:
+      213: 3146294891760452929
+    second: ArcherOutfit_11
+  - first:
+      213: 6008471521914293884
+    second: ArcherOutfit_12
+  - first:
+      213: -1689403569896556680
+    second: ArcherOutfit_13
+  - first:
+      213: 7873329078516132137
+    second: ArcherOutfit_14
+  - first:
+      213: 8232698857497274281
+    second: ArcherOutfit_15
+  - first:
+      213: 5021247482136948982
+    second: ArcherOutfit_16
+  - first:
+      213: 8776275242492710634
+    second: ArcherOutfit_17
+  - first:
+      213: 4068249949067574633
+    second: ArcherOutfit_18
+  - first:
+      213: 6932582357265918720
+    second: ArcherOutfit_19
+  - first:
+      213: 2886868074372277371
+    second: ArcherOutfit_20
+  - first:
+      213: -1665243604563579837
+    second: ArcherOutfit_21
+  - first:
+      213: 2939617034554221425
+    second: ArcherOutfit_22
+  - first:
+      213: -6136752556571538388
+    second: ArcherOutfit_23
+  - first:
+      213: 7447270873881567150
+    second: ArcherOutfit_24
+  - first:
+      213: 2598048768984353558
+    second: ArcherOutfit_25
+  - first:
+      213: -5818228120688462965
+    second: ArcherOutfit_26
+  - first:
+      213: 6598137526734745531
+    second: ArcherOutfit_27
+  - first:
+      213: -8271221745595469158
+    second: ArcherOutfit_28
+  - first:
+      213: 8669156519168834500
+    second: ArcherOutfit_29
+  - first:
+      213: 1389025666753675654
+    second: ArcherOutfit_30
+  - first:
+      213: 6629027576460836605
+    second: ArcherOutfit_31
+  - first:
+      213: 5676443973810762700
+    second: ArcherOutfit_32
+  - first:
+      213: -8184626482646201529
+    second: ArcherOutfit_33
+  - first:
+      213: 5601249576661407648
+    second: ArcherOutfit_34
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 1
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 0
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 1
+  spriteExtrude: 1
+  spriteMeshType: 0
+  alignment: 7
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 16
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationMethod: 0
+  spriteTessellationDetail: -1
+  spriteGeometrySubdivision: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: WebGL
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: ArcherOutfit_0
+      rect:
+        serializedVersion: 2
+        x: 3
+        y: 785
+        width: 34
+        height: 50
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 92339c3bbab2bb3b0800000000000000
+      internalID: -5495750903819848919
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ArcherOutfit_1
+      rect:
+        serializedVersion: 2
+        x: 51
+        y: 785
+        width: 34
+        height: 50
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 4f9be76fa6ad884c0800000000000000
+      internalID: -4284934892506138124
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ArcherOutfit_2
+      rect:
+        serializedVersion: 2
+        x: 3
+        y: 729
+        width: 34
+        height: 50
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 06e9819031d1a5b70800000000000000
+      internalID: 8888448782163287648
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ArcherOutfit_3
+      rect:
+        serializedVersion: 2
+        x: 51
+        y: 729
+        width: 34
+        height: 50
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e64da28d8502cd5b0800000000000000
+      internalID: -5342359492012354450
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ArcherOutfit_4
+      rect:
+        serializedVersion: 2
+        x: 99
+        y: 729
+        width: 34
+        height: 50
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 14eeccd816b30d270800000000000000
+      internalID: 8273177805656485441
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ArcherOutfit_5
+      rect:
+        serializedVersion: 2
+        x: 147
+        y: 729
+        width: 34
+        height: 50
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 563295d4b72738d30800000000000000
+      internalID: 4432512332166931301
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ArcherOutfit_6
+      rect:
+        serializedVersion: 2
+        x: 195
+        y: 729
+        width: 34
+        height: 50
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7d0b2502b3b47e590800000000000000
+      internalID: -7645059125120683817
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ArcherOutfit_7
+      rect:
+        serializedVersion: 2
+        x: 243
+        y: 729
+        width: 34
+        height: 50
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: fb3c07e56879de2f0800000000000000
+      internalID: -941930143684705345
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ArcherOutfit_8
+      rect:
+        serializedVersion: 2
+        x: 291
+        y: 729
+        width: 34
+        height: 50
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5c8b86faff2904600800000000000000
+      internalID: 450521589594241221
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ArcherOutfit_9
+      rect:
+        serializedVersion: 2
+        x: 339
+        y: 729
+        width: 34
+        height: 50
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 8da829326e5e42710800000000000000
+      internalID: 1667710538635971288
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ArcherOutfit_10
+      rect:
+        serializedVersion: 2
+        x: 3
+        y: 617
+        width: 34
+        height: 48
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f39f122fe0e18b1d0800000000000000
+      internalID: -3334882474527164097
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ArcherOutfit_11
+      rect:
+        serializedVersion: 2
+        x: 3
+        y: 563
+        width: 34
+        height: 48
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1450206c882e9ab20800000000000000
+      internalID: 3146294891760452929
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ArcherOutfit_12
+      rect:
+        serializedVersion: 2
+        x: 3
+        y: 505
+        width: 34
+        height: 50
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c7e80c2d301626350800000000000000
+      internalID: 6008471521914293884
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ArcherOutfit_13
+      rect:
+        serializedVersion: 2
+        x: 3
+        y: 337
+        width: 34
+        height: 50
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 877f90e67680e88e0800000000000000
+      internalID: -1689403569896556680
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ArcherOutfit_14
+      rect:
+        serializedVersion: 2
+        x: 51
+        y: 337
+        width: 34
+        height: 50
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 92925bc051fa34d60800000000000000
+      internalID: 7873329078516132137
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ArcherOutfit_15
+      rect:
+        serializedVersion: 2
+        x: 99
+        y: 337
+        width: 34
+        height: 50
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9a7a3effdfb604270800000000000000
+      internalID: 8232698857497274281
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ArcherOutfit_16
+      rect:
+        serializedVersion: 2
+        x: 3
+        y: 283
+        width: 34
+        height: 48
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6f0f8163bfd0fa540800000000000000
+      internalID: 5021247482136948982
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ArcherOutfit_17
+      rect:
+        serializedVersion: 2
+        x: 51
+        y: 283
+        width: 34
+        height: 48
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: aee45d795d79bc970800000000000000
+      internalID: 8776275242492710634
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ArcherOutfit_18
+      rect:
+        serializedVersion: 2
+        x: 3
+        y: 225
+        width: 34
+        height: 50
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 96d7caf26c3557830800000000000000
+      internalID: 4068249949067574633
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ArcherOutfit_19
+      rect:
+        serializedVersion: 2
+        x: 3
+        y: 169
+        width: 34
+        height: 50
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 00ba9fc6cea753060800000000000000
+      internalID: 6932582357265918720
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ArcherOutfit_20
+      rect:
+        serializedVersion: 2
+        x: 51
+        y: 169
+        width: 34
+        height: 50
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b742066e737301820800000000000000
+      internalID: 2886868074372277371
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ArcherOutfit_21
+      rect:
+        serializedVersion: 2
+        x: 99
+        y: 169
+        width: 34
+        height: 50
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 34c2f75b3cdd3e8e0800000000000000
+      internalID: -1665243604563579837
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ArcherOutfit_22
+      rect:
+        serializedVersion: 2
+        x: 3
+        y: 113
+        width: 34
+        height: 50
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 173aa404e1e9bc820800000000000000
+      internalID: 2939617034554221425
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ArcherOutfit_23
+      rect:
+        serializedVersion: 2
+        x: 3
+        y: 57
+        width: 34
+        height: 50
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c2c451f4010e5daa0800000000000000
+      internalID: -6136752556571538388
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ArcherOutfit_24
+      rect:
+        serializedVersion: 2
+        x: 51
+        y: 57
+        width: 34
+        height: 50
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: eafd2d707650a5760800000000000000
+      internalID: 7447270873881567150
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ArcherOutfit_25
+      rect:
+        serializedVersion: 2
+        x: 99
+        y: 59
+        width: 34
+        height: 48
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 61b0470279f1e0420800000000000000
+      internalID: 2598048768984353558
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ArcherOutfit_26
+      rect:
+        serializedVersion: 2
+        x: 147
+        y: 57
+        width: 34
+        height: 50
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b83fc2cb950814fa0800000000000000
+      internalID: -5818228120688462965
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ArcherOutfit_27
+      rect:
+        serializedVersion: 2
+        x: 5
+        y: 23
+        width: 16
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: bbfe2344f1b419b50800000000000000
+      internalID: 6598137526734745531
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ArcherOutfit_28
+      rect:
+        serializedVersion: 2
+        x: 53
+        y: 23
+        width: 16
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a92bb4b25a7b63d80800000000000000
+      internalID: -8271221745595469158
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ArcherOutfit_29
+      rect:
+        serializedVersion: 2
+        x: 101
+        y: 23
+        width: 16
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 4cbf15b4ce70f4870800000000000000
+      internalID: 8669156519168834500
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ArcherOutfit_30
+      rect:
+        serializedVersion: 2
+        x: 149
+        y: 23
+        width: 16
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 681c0ca0c7fc64310800000000000000
+      internalID: 1389025666753675654
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ArcherOutfit_31
+      rect:
+        serializedVersion: 2
+        x: 213
+        y: 25
+        width: 8
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: dfe773d65790ffb50800000000000000
+      internalID: 6629027576460836605
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ArcherOutfit_32
+      rect:
+        serializedVersion: 2
+        x: 261
+        y: 25
+        width: 8
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: cc3b56618b7c6ce40800000000000000
+      internalID: 5676443973810762700
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ArcherOutfit_33
+      rect:
+        serializedVersion: 2
+        x: 309
+        y: 25
+        width: 8
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 74b4e9af39d5a6e80800000000000000
+      internalID: -8184626482646201529
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ArcherOutfit_34
+      rect:
+        serializedVersion: 2
+        x: 357
+        y: 25
+        width: 8
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0a7d53330d2abbd40800000000000000
+      internalID: 5601249576661407648
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 5e97eb03825dee720800000000000000
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable: {}
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

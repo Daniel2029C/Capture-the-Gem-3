@@ -72,7 +72,7 @@ namespace CTG.Combat
             m_WobbleTicks = 12;
             m_LastWobbleDirection = hit.Direction == 0 ? 1 : hit.Direction;
 
-            CombatText.Spawn(HitboxPx.center, damage.ToString(), CombatText.DummyDamaged);
+            MatchContext.Current?.Presentation.ShowText(HitboxPx.center, damage.ToString(), TextKind.Damage);
             return damage;
         }
 

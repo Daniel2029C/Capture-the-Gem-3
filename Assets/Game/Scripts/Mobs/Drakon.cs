@@ -116,7 +116,7 @@ namespace CTG.Mobs
                 m_NextShotTick = Mathf.Max(m_NextShotTick, m_Age + k_StaggerTicks);
             }
 
-            CombatText.Spawn(m_Center + new Vector2(0f, 20f), damage.ToString(), CombatText.DummyDamaged);
+            MatchContext.Current?.Presentation.ShowText(m_Center + new Vector2(0f, 20f), damage.ToString(), TextKind.Damage);
 
             if (Health <= 0)
             {

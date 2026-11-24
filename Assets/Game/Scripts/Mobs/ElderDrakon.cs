@@ -104,7 +104,7 @@ namespace CTG.Mobs
 
             m_TicksSinceHit = 0;
             m_HitFlashTicks = 6;
-            CombatText.Spawn(HitboxPx.center + new Vector2(0f, 40f), damage.ToString(), CombatText.DummyDamaged);
+            MatchContext.Current?.Presentation.ShowText(HitboxPx.center + new Vector2(0f, 40f), damage.ToString(), TextKind.Damage);
 
             if (m_Life.IsDead)
             {

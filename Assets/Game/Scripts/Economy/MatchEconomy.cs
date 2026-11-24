@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using CTG.Classes;
+using CTG.Core;
 using CTG.Gameplay;
-using CTG.UI;
 
 namespace CTG.Economy
 {
@@ -82,7 +82,7 @@ namespace CTG.Economy
             player.Progress.AddExp(reward.Exp);
 
             string text = reward.Shards > 0 ? $"{reason}  +{reward.Shards} shards  +{reward.Exp} xp" : $"{reason}  +{reward.Exp} xp";
-            CombatText.Spawn(player.Motor.Center + new UnityEngine.Vector2(0f, 40f), text, CombatText.Healed);
+            MatchContext.Current?.Presentation.ShowText(player.Motor.Center + new UnityEngine.Vector2(0f, 40f), text, TextKind.Heal);
         }
     }
 }

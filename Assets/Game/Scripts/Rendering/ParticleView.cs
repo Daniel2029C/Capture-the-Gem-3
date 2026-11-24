@@ -49,7 +49,7 @@ namespace CTG.Rendering
         }
 
         /// <summary>True for the tile kinds that shed dirt.</summary>
-        public static bool IsDirt(TileId id) => id == TileId.BlueDirt || id == TileId.RedDirt;
+        public static bool IsDirt(TileId id) => PresentationEvents.ShedsDirt(id);
 
         /// <summary>
         /// A burst of chips. <paramref name="direction"/> biases where they fly (zero = upward);

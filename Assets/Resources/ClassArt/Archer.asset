@@ -1,0 +1,46 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 85751c7dd860d48628cb3dbcc41dd1cc, type: 3}
+  m_Name: Archer
+  m_EditorClassIdentifier: Assembly-CSharp::CTG.Rendering.ClassSpriteSet
+  Outfit: {fileID: 2800000, guid: 8a8031c1bb5994e39a8bca484ca11c73, type: 3}
+  TeamMask: {fileID: 0}
+  UseBaseBody: 0
+  BowArm: 0
+  NearShoulderPx: {x: 6, y: 25}
+  FarShoulderPx: {x: -6, y: 26}
+  UpperArmLengthPx: 10
+  ForearmLengthPx: 10
+  BowElbowBend: 1
+  DrawElbowBend: -1
+  BowPivotPx: {x: 1, y: 25}
+  GripDistancePx: 13
+  StringRestPx: 11
+  StringFullPx: 2
+  QuiverPx: {x: -13, y: 34}
+  ReachFraction: 0.12
+  BraceAtCharge: 0.35
+  Death: []
+  IdleFramesPerSecond: 6
+  RunFramesPerSecond: 12
+  RunCycleDistancePx: 80
+  ActionLegsHeightPx: 12
+  SprintFramesPerSecond: 14
+  AirFramesPerSecond: 10
+  ReleaseFramesPerSecond: 16
+  HitFramesPerSecond: 12
+  DeathFramesPerSecond: 12
+  LandSeconds: 0.12
+  MinAirTimeForLanding: 0.2
+  OutlineThickness: 2
+  OutlineAlphaThreshold: 0.5
+  OutlineOpacity: 1

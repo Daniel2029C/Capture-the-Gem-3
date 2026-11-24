@@ -97,6 +97,8 @@ namespace CTG.Rendering
         public float StringFullPx = 1f;
         [Tooltip("Where the draw hand reaches to at the start of a draw (the quiver), pixels from the feet.")]
         public Vector2 QuiverPx = new(-6f, 38f);
+        [Tooltip("How far the swinging arm reaches as a fraction of its full length (1 = fully straight). The fist holds the item here.")]
+        [Range(0.5f, 1f)] public float SwingReach = 0.85f;
         [Tooltip("Charge below which the draw hand is still coming back from the quiver.")]
         [Range(0f, 0.5f)] public float ReachFraction = 0.12f;
         [Tooltip("Charge at which the grounded body switches from Ready to Braced.")]
@@ -109,6 +111,10 @@ namespace CTG.Rendering
         [Header("Timing (frames per second)")]
         public float IdleFramesPerSecond = 6f;
         public float RunFramesPerSecond = 12f;
+        [Tooltip("Horizontal travel for one ground stride cycle, in simulation pixels. Zero uses frame timing.")]
+        [Min(0f)] public float RunCycleDistancePx;
+        [Tooltip("Height of the leg strip from the bottom of a sheet cell. Zero uses whole poses for item actions.")]
+        [Range(0, CharacterSheet.CellHeight)] public int ActionLegsHeightPx;
         public float SprintFramesPerSecond = 14f;
         public float AirFramesPerSecond = 10f;
         public float ReleaseFramesPerSecond = 16f;

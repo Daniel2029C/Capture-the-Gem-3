@@ -1,6 +1,6 @@
 using System;
 using CTG.Combat;
-using CTG.UI;
+using CTG.Core;
 using UnityEngine;
 
 namespace CTG.Gameplay
@@ -48,7 +48,7 @@ namespace CTG.Gameplay
 
             int dealt = Mathf.Min(Health, Mathf.Max(1, hit.Damage));
             Health -= dealt;
-            CombatText.Spawn(HitboxPx.center + new Vector2(0f, HitboxPx.height * 0.5f), dealt.ToString(), CombatText.DummyDamaged);
+            MatchContext.Current?.Presentation.ShowText(HitboxPx.center + new Vector2(0f, HitboxPx.height * 0.5f), dealt.ToString(), TextKind.Damage);
             if (Health <= 0) Broken?.Invoke(this, breaker);
             return dealt;
         }
